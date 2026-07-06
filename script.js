@@ -1,7 +1,7 @@
 // ==========================================
 // STATE & CONFIG
 // ==========================================
-const CLOUD_URL = "YOUR_GOOGLE_SCRIPT_WEB_APP_URL"; 
+const CLOUD_URL = "https://script.google.com/macros/s/AKfycbww9WoOJyvoVcFkrVN_gBnvpNWLsne7G_hBj0JhQu40TMGHWmGR_yZzLIwT4Y6hJ4qYww/exec"; 
 
 const DEFAULT_CATS = {
     expense: ['🍔 Food & Dining', '🛒 Groceries', '🚗 Transport & Fuel', '🛍️ Shopping', '🏠 Rent & Utilities', '🎮 Entertainment', '🏥 Medical', '🎓 Education', '🔄 Subscriptions', '✨ Misc'],
