@@ -718,7 +718,7 @@
         <div class="card-title">🎯 Monthly Budget Cap</div>
         <div class="budget-header">
             <span class="budget-spent" id="budget-spent">₹0</span>
-            <span class="budget-cap">of ₹<span id="budget-cap-display">25,000</span></span>
+            <span class="budget-cap">of ₹<span id="budget-cap-display">25,000</span> <button id="edit-budget-btn" style="background:none;border:none;cursor:pointer;font-size:0.85rem;" title="Edit Budget Cap">✏️</button></span>
         </div>
         <div class="bar-bg"><div class="bar-fill" id="budget-bar"></div></div>
         <div class="budget-pct" id="budget-pct">0% used</div>
@@ -833,8 +833,8 @@
    =========================================================== */
 
 // ===== CONFIGURATION =====
-const CLOUD_URL = "https://script.google.com/macros/s/AKfycbyt5gn0zwaVkQSaJCfoc2CTNCVBTi7a_z3jih0Z1X9yUpED9HNoj6MFriU2V4DJEeGqpw/exec";
-const MONTHLY_BUDGET_CAP = 25000;
+const CLOUD_URL = "YOUR_GOOGLE_SCRIPT_WEB_APP_URL";
+let MONTHLY_BUDGET_CAP = parseFloat(localStorage.getItem('rupee_tracker_budget_cap')) || 25000;
 
 // ===== CATEGORIES =====
 const CATEGORIES = {
@@ -1103,8 +1103,39 @@ function clearAllData() {
 
 // ===== CLOUD SYNC =====
 
+async function loadDataFromCloud() {
+    if (CLOUD_URL === "https://script.google.com/macros/s/AKfycbyt5gn0zwaVkQSaJCfoc2CTNCVBTi7a_z3jih0Z1X9yUpED9HNoj6MFriU2V4DJEeGqpw/exec") return;
+    try {
+        const btn = $('log-button');
+        const originalText = btn.textContent;
+        btn.textContent = 'Pulling from cloud...';
+        btn.disabled = true;
+
+        const response = await fetch(CLOUD_URL);
+        const result = await response.json();
+        
+        if (result.status === 'success' && result.data) {
+            transactions = result.data;
+            migrateData();
+            updateUI();
+        }
+        
+        btn.textContent = originalText;
+        btn.disabled = false;
+    } catch (e) {
+        console.error("Cloud pull failed", e);
+        const btn = $('log-button');
+        const originalText = btn.textContent;
+        btn.textContent = 'Cloud sync failed';
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }, 3000);
+    }
+}
+
 function syncToCloud(tx, action) {
-    if (CLOUD_URL === "YOUR_GOOGLE_SCRIPT_WEB_APP_URL") return;
+    if (CLOUD_URL === "https://script.google.com/macros/s/AKfycbyt5gn0zwaVkQSaJCfoc2CTNCVBTi7a_z3jih0Z1X9yUpED9HNoj6MFriU2V4DJEeGqpw/exec") return;
     const btn = $('log-button');
     btn.disabled = true;
     btn.textContent = 'Syncing...';
@@ -1550,6 +1581,16 @@ function initEventListeners() {
     $('amount').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') addTransaction();
     });
+
+    // Edit budget cap
+    $('edit-budget-btn').addEventListener('click', () => {
+        const newCap = prompt("Enter new monthly budget cap (₹):", MONTHLY_BUDGET_CAP);
+        if (newCap && !isNaN(newCap) && parseFloat(newCap) > 0) {
+            MONTHLY_BUDGET_CAP = parseFloat(newCap);
+            localStorage.setItem('rupee_tracker_budget_cap', MONTHLY_BUDGET_CAP);
+            updateUI();
+        }
+    });
 }
 
 // ===== INITIALIZATION =====
@@ -1561,10 +1602,10 @@ function init() {
     setMode('expense');
     initEventListeners();
     updateUI();
+    loadDataFromCloud();
 }
 
 init();
 </script>
 </body>
 </html>
-
