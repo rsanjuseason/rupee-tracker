@@ -545,7 +545,9 @@ function saveTx(){
 
     if(p.action==='edit'){const i=raw.findIndex(t=>t.id===p.id);if(i>-1)raw[i]=p;}
     else raw.push(p);
-
+    if (p.recurring) {
+        autoLogRecurring();
+    }
     cancelEdit();
     renderAll();
     push(p);
