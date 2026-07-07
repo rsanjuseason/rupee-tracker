@@ -2,7 +2,7 @@
 // RUPEE TRACKER PRO — FULL MODULAR ENGINE
 // ============================================================
 
-const CLOUD_URL = "CLOUD_URL";
+const CLOUD_URL = "https://script.google.com/macros/s/AKfycbzhp6FcY8xcxuaMw2aQG3TLhAFbn9FfT2AxrvF3l7I_GO78Sn3RPfpz5UtBvoe1FJWUBA/exec";
 
 // Default categories
 const CATS = {
