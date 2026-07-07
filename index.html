@@ -3,243 +3,254 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rupee Premium Tracker Pro v2</title>
+    <title>₹ Rupee Tracker Pro</title>
+    
+    <!-- PWA & Mobile Home Screen Setup -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <meta name="theme-color" content="#4B2A8A">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="₹ Tracker">
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="app-container">
+<div class="app">
 
     <!-- HEADER -->
-    <header class="app-header">
+    <header class="hdr">
         <div>
-            <h1 class="app-title">₹ Rupee Tracker <span class="pro-badge">PRO v2</span></h1>
-            <p class="app-subtitle">Ultimate Cloud Financial Dashboard</p>
+            <h1>₹ Rupee Tracker <span class="badge">PRO</span></h1>
+            <p>Cloud Financial Dashboard</p>
         </div>
-        <div class="header-actions">
-            <button class="icon-btn" id="theme-toggle">🌙</button>
-            <button class="icon-btn" id="settings-toggle">⚙️</button>
+        <div class="hdr-r">
+            <button class="ib" id="theme-toggle">🌙</button>
+            <button class="ib" id="settings-toggle">⚙️</button>
         </div>
     </header>
 
     <!-- TABS -->
-    <div class="nav-tabs">
-        <button class="nav-tab active" data-target="tab-dashboard">Dashboard</button>
-        <button class="nav-tab" data-target="tab-entries">Entries</button>
-        <button class="nav-tab" data-target="tab-subscriptions">Subscriptions</button>
-        <button class="nav-tab" data-target="tab-goals">Goals</button>
+    <div class="tabs">
+        <button class="tab on" data-t="t-dash">📊 Dashboard</button>
+        <button class="tab" data-t="t-entry">✍️ Entries</button>
+        <button class="tab" data-t="t-debt">🤝 Debts</button>
+        <button class="tab" data-t="t-sub">🔄 Recurring</button>
+        <button class="tab" data-t="t-goal">🎯 Goals</button>
     </div>
 
-    <!-- GLOBAL PERIOD NAV -->
-    <div class="period-nav">
-        <div class="period-toggles">
-            <div class="period-toggle active" data-type="month">Month</div>
-            <div class="period-toggle" data-type="week">Week</div>
+    <!-- PERIOD NAV -->
+    <div class="pn">
+        <div class="pt">
+            <div class="ptb" data-type="week">Week</div>
+            <div class="ptb on" data-type="month">Month</div>
+            <div class="ptb" data-type="year">Year</div>
         </div>
-        <div class="period-controls">
-            <button class="period-btn" id="period-prev">◀</button>
-            <div class="period-label" id="period-label">Loading...</div>
-            <button class="period-btn" id="period-next">▶</button>
-        </div>
-    </div>
-
-    <!-- TAB 1: DASHBOARD -->
-    <div id="tab-dashboard" class="tab-content active">
-        <div class="dashboard-grid">
-            <div class="stat-card" data-accent="expense">
-                <div class="stat-icon">📉</div>
-                <div class="stat-label">Period Spend</div>
-                <div class="stat-value c-expense" id="stat-spend">₹0</div>
-            </div>
-            <div class="stat-card" data-accent="income">
-                <div class="stat-icon">💰</div>
-                <div class="stat-label">Period Income</div>
-                <div class="stat-value c-income" id="stat-income">₹0</div>
-            </div>
-            <div class="stat-card" data-accent="accent">
-                <div class="stat-label">Net Flow</div>
-                <div class="stat-value c-accent" id="stat-net">₹0</div>
-            </div>
-            <div class="stat-card" data-accent="warning">
-                <div class="stat-label">Total Cloud TXNs</div>
-                <div class="stat-value c-warning" id="stat-total-txns">0</div>
-            </div>
-        </div>
-
-        <div class="card" id="card-budget">
-            <div class="card-title">🎯 Budget Caps (Period)</div>
-            <div class="budget-header">
-                <span class="budget-spent" id="budget-spent-global">₹0</span>
-                <span class="budget-cap">of ₹<span id="budget-cap-global">25000</span></span>
-            </div>
-            <div class="bar-bg"><div class="bar-fill" id="budget-bar-global"></div></div>
-            <div class="budget-pct" id="budget-pct-global">0%</div>
-            <div id="micro-budgets" class="micro-budget"></div>
-        </div>
-
-        <div class="insights-pair">
-            <div class="card" id="card-categories">
-                <div class="card-title">📂 Expenses by Category</div>
-                <div id="category-breakdown"></div>
-            </div>
-            <div class="card" id="card-donut">
-                <div class="card-title">💹 Flow Ratio</div>
-                <div id="donut-chart"></div>
-            </div>
+        <div class="pc">
+            <button class="pb" id="p-prev">◀</button>
+            <div class="pl" id="p-label">...</div>
+            <button class="pb" id="p-next">▶</button>
         </div>
     </div>
 
-    <!-- TAB 2: ENTRIES -->
-    <div id="tab-entries" class="tab-content">
-        <div class="card" id="input-form-section">
-            <h3 style="margin-bottom:12px; font-size:1rem;" id="form-heading">✍️ Log Entry</h3>
-            <div class="toggle-container">
-                <button class="toggle-btn active expense" data-mode="expense">Expense</button>
-                <button class="toggle-btn income" data-mode="income">Income</button>
-                <button class="toggle-btn lend" data-mode="lend">Lend/Borrow</button>
-            </div>
-            
-            <div class="form-row">
-                <div class="input-group">
-                    <label>Date</label>
-                    <input type="date" id="tx-date" required>
-                </div>
-                <div class="input-group multi-curr">
-                    <div style="flex:1;">
-                        <label>Amount</label>
-                        <input type="number" id="tx-amount" placeholder="0.00" step="0.01" required>
-                    </div>
-                    <select id="tx-currency" class="currency-sel">
-                        <option value="INR">INR</option>
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                        <option value="GBP">GBP</option>
-                    </select>
-                </div>
-            </div>
+    <!-- BUDGET ALERTS -->
+    <div id="budget-alerts"></div>
 
-            <div class="form-row">
-                <div class="input-group">
-                    <label>Category</label>
-                    <select id="tx-category"></select>
+    <!-- DASHBOARD -->
+    <div id="t-dash" class="tc on">
+        <div class="sg">
+            <div class="sc" data-a="r"><div class="si">📉</div><div class="sl">Spent</div><div class="sv cr" id="s-spend">₹0</div></div>
+            <div class="sc" data-a="g"><div class="si">💰</div><div class="sl">Earned</div><div class="sv cg" id="s-income">₹0</div></div>
+            <div class="sc" data-a="p"><div class="si">⚖️</div><div class="sl">Net Flow</div><div class="sv cp" id="s-net">₹0</div></div>
+            <div class="sc" data-a="o"><div class="si">☁️</div><div class="sl">All Entries</div><div class="sv co" id="s-total">0</div></div>
+            <div class="sc" data-a="b"><div class="si">🏦</div><div class="sl">Net Worth</div><div class="sv cb" id="s-nw">₹0</div></div>
+            <div class="sc" data-a="d"><div class="si">🤝</div><div class="sl">Active Debts</div><div class="sv cd2" id="s-debt">₹0</div></div>
+        </div>
+
+        <!-- Month Comparison -->
+        <div class="cd" id="card-cmp">
+            <div class="ct">📅 This Month vs Last Month</div>
+            <div class="cmp" id="cmp-bars"></div>
+        </div>
+
+        <!-- Budget -->
+        <div class="cd">
+            <div class="ct">🎯 Budget</div>
+            <div class="bh"><span class="bs" id="b-spent">₹0</span><span class="bc">of ₹<span id="b-cap">25,000</span></span></div>
+            <div class="bb"><div class="bf" id="b-bar"></div></div>
+            <div class="bp" id="b-pct">0%</div>
+            <div id="micro-b" class="mb"></div>
+        </div>
+
+        <!-- Daily Spending Chart -->
+        <div class="cd">
+            <div class="ct">📊 Daily Spending Trend</div>
+            <div id="daily-chart"></div>
+        </div>
+
+        <div class="ip">
+            <div class="cd"><div class="ct">📂 Top Categories</div><div id="cat-bars"></div></div>
+            <div class="cd"><div class="ct">💹 Income vs Expense</div><div id="donut"></div></div>
+        </div>
+    </div>
+
+    <!-- ENTRIES -->
+    <div id="t-entry" class="tc">
+        <div class="cd" id="form-sec">
+            <div class="ct" id="form-h" style="font-size:.95rem">✍️ Log Entry</div>
+            <div class="tg">
+                <button class="tb on expense" data-mode="expense">Expense</button>
+                <button class="tb income" data-mode="income">Income</button>
+                <button class="tb lend" data-mode="lend">Lend/Borrow</button>
+            </div>
+            <div class="fr">
+                <div class="ig"><label>Date</label><input type="date" id="tx-date" required></div>
+                <div class="ig mc">
+                    <div style="flex:1"><label>Amount</label><input type="number" id="tx-amt" placeholder="0.00" step="0.01" inputmode="decimal" required></div>
+                    <select id="tx-cur" class="cs"><option value="INR">₹</option><option value="USD">$</option><option value="EUR">€</option><option value="GBP">£</option></select>
                 </div>
-                <div class="input-group">
-                    <label>Payment Mode</label>
+            </div>
+            <div class="fr">
+                <div class="ig"><label>Category</label><select id="tx-cat"></select></div>
+                <div class="ig"><label>Payment Mode</label>
                     <select id="tx-mode">
-                        <option>📱 UPI / Bank</option>
-                        <option>💵 Cash</option>
-                        <option>💳 Credit Card</option>
+                        <option>📱 UPI / Bank</option><option>💵 Cash</option><option>💳 Credit Card</option><option>🏦 Bank Transfer</option>
                     </select>
                 </div>
             </div>
-
-            <div class="input-group">
-                <label>Note / Person</label>
-                <input type="text" id="tx-note" placeholder="Details...">
+            <div class="ig"><label>Account</label>
+                <select id="tx-acct"><option>🏦 Bank Account</option><option>💵 Cash</option><option>💳 Credit Card</option></select>
             </div>
-
-            <div style="margin-bottom: 12px; display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="tx-recurring">
-                <label for="tx-recurring" style="margin:0;">🔄 Recurring Monthly</label>
+            <!-- Lend/Borrow fields -->
+            <div id="lend-fields" style="display:none">
+                <div class="fr">
+                    <div class="ig"><label>Person Name</label><input type="text" id="tx-person" placeholder="Who?"></div>
+                    <div class="ig"><label>Return Date</label><input type="date" id="tx-due"></div>
+                </div>
             </div>
-
-            <button class="submit-btn" id="btn-save-tx">Log to Cloud</button>
-            <button class="cancel-edit-btn" id="btn-cancel-edit">✕ Cancel Edit</button>
+            <div class="ig"><label>Note</label><input type="text" id="tx-note" placeholder="Description..." autocomplete="off"></div>
+            <div class="cbr">
+                <input type="checkbox" id="tx-rec">
+                <label for="tx-rec">🔄 Recurring</label>
+                <select id="tx-freq" class="cs" style="margin-left:8px;width:auto;display:none">
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly" selected>Monthly</option>
+                    <option value="yearly">Yearly</option>
+                </select>
+            </div>
+            <button class="sbtn" id="btn-save">Log & Sync ☁️</button>
+            <button class="cbtn" id="btn-cancel">✕ Cancel Edit</button>
         </div>
-
-        <div class="filter-bar">
-            <input type="text" id="search-input" placeholder="🔍 Search current period...">
-            <button class="export-btn" id="btn-export">CSV</button>
+        <div class="fb">
+            <input type="text" id="search" placeholder="🔍 Search...">
+            <button class="eb" id="btn-csv">📥 CSV</button>
         </div>
-        <div id="tx-list" class="tx-list"></div>
+        <div id="tx-list" class="tl"></div>
     </div>
 
-    <!-- TAB 3: SUBSCRIPTIONS -->
-    <div id="tab-subscriptions" class="tab-content">
-        <div class="card">
-            <div class="card-title">🔄 Active Subscriptions & Fixed Costs</div>
-            <p style="font-size:0.8rem; color:var(--text-sub); margin-bottom:12px;">Auto-detected from transactions marked as 'Recurring'. Showing next estimated due dates.</p>
-            <div id="subs-list"></div>
+    <!-- DEBT LEDGER -->
+    <div id="t-debt" class="tc">
+        <div class="cd">
+            <div class="ct">🤝 Debt Ledger</div>
+            <p class="sd" style="margin-bottom:10px">Tracks who owes you and who you owe. Lent = they owe you. Borrowed = you owe them. Partial settlements supported.</p>
+            <div class="sg" style="margin-bottom:12px">
+                <div class="sc" data-a="g"><div class="sl">They Owe You</div><div class="sv cg" id="d-owed">₹0</div></div>
+                <div class="sc" data-a="r"><div class="sl">You Owe Them</div><div class="sv cr" id="d-owes">₹0</div></div>
+            </div>
+            <div id="debt-list"></div>
         </div>
     </div>
 
-    <!-- TAB 4: GOALS -->
-    <div id="tab-goals" class="tab-content">
-        <div class="card">
-            <div class="card-title">🎯 Savings Goals</div>
-            <button id="btn-new-goal" style="padding:8px 12px; background:var(--bg-color); border:1px solid var(--border); border-radius:4px; font-weight:600; cursor:pointer; width:100%; margin-bottom:12px;">➕ Create New Goal</button>
-            <div id="goals-list"></div>
+    <!-- SUBSCRIPTIONS -->
+    <div id="t-sub" class="tc">
+        <div class="cd">
+            <div class="ct">🔄 Recurring & Fixed Costs</div>
+            <p class="sd" style="margin-bottom:10px">Auto-detected from entries marked recurring. Predicts next due dates.</p>
+            <div id="forecast-box"></div>
+            <div id="sub-tot"></div>
+            <div id="sub-list"></div>
         </div>
     </div>
 
+    <!-- GOALS -->
+    <div id="t-goal" class="tc">
+        <div class="cd">
+            <div class="ct">🎯 Savings Goals</div>
+            <button id="btn-new-goal" class="ngb">➕ Create New Goal</button>
+            <div id="goal-list"></div>
+        </div>
+    </div>
 </div>
 
 <!-- SETTINGS MODAL -->
-<div class="modal-overlay" id="settings-modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            ⚙️ Settings
-            <button class="close-modal" id="close-settings">✕</button>
+<div class="mo" id="m-settings">
+    <div class="mc">
+        <div class="mh">⚙️ Settings <button class="mx" id="x-settings">✕</button></div>
+        <div class="ss"><div class="st">☁️ Cloud Sync</div><p class="sd">All data stored in Google Sheets.</p><button class="sync-b" id="btn-sync">🔄 Force Pull</button></div>
+        <div class="ss"><div class="st">🎯 Monthly Budget</div><input type="number" id="s-budget" style="width:100%"></div>
+        <div class="ss">
+            <div class="st">⚠️ Alert Threshold %</div>
+            <p class="sd">Get warned when spending crosses this % of budget.</p>
+            <input type="number" id="s-threshold" placeholder="80" min="1" max="100" style="width:100%">
         </div>
-        
-        <div class="settings-section">
-            <div class="settings-title">Cloud Connection</div>
-            <p style="font-size:0.75rem; color:var(--text-sub); margin-bottom:4px;">App operates in cloud-only mode. All data is fetched on load.</p>
-            <button id="btn-force-sync" style="padding:6px 12px; font-size:0.8rem;">🔄 Force Cloud Pull</button>
-        </div>
-
-        <div class="settings-section">
-            <div class="settings-title">Global Budget Cap (₹)</div>
-            <input type="number" id="set-global-budget" style="width:100%;">
-        </div>
-
-        <div class="settings-section">
-            <div class="settings-title">Custom Categories</div>
-            <div style="display:flex; gap:4px; margin-bottom:8px;">
-                <input type="text" id="new-cat-name" placeholder="e.g. 🐶 Pets" style="flex:1;">
-                <select id="new-cat-type" style="width:100px;">
-                    <option value="expense">Expense</option>
-                    <option value="income">Income</option>
+        <div class="ss">
+            <div class="st">➕ Custom Categories</div>
+            <div class="sr">
+                <select id="new-cat-emoji" style="width:55px;padding:7px 4px;font-size:1.1rem">
+                    <option value="🐶">🐶</option><option value="🐱">🐱</option><option value="✈️">✈️</option><option value="🚆">🚆</option>
+                    <option value="🔧">🔧</option><option value="🛠️">🛠️</option><option value="💄">💄</option><option value="💅">💅</option>
+                    <option value="👶">👶</option><option value="🧸">🧸</option><option value="📱">📱</option><option value="💻">💻</option>
+                    <option value="🏥">🏥</option><option value="💊">💊</option><option value="🎉">🎉</option><option value="🎈">🎈</option>
+                    <option value="⚽">⚽</option><option value="🏋️">🏋️</option><option value="📚">📚</option><option value="🎓">🎓</option>
+                    <option value="🎁">🎁</option><option value="💳">💳</option><option value="💼">💼</option><option value="👔">👔</option>
+                    <option value="🏠">🏠</option><option value="🛋️">🛋️</option><option value="🎨">🎨</option><option value="🎸">🎸</option>
+                    <option value="🍔">🍔</option><option value="🍕">🍕</option><option value="🍺">🍺</option><option value="☕">☕</option>
+                    <option value="💸">💸</option><option value="💎">💎</option><option value="🌱">🌱</option><option value="✨">✨</option>
                 </select>
-                <button id="btn-add-cat" style="padding:0 12px;">Add</button>
+                <input type="text" id="new-cat" placeholder="Category Name" style="flex:1">
+                <select id="new-cat-t" style="width:75px"><option value="expense">Exp</option><option value="income">Inc</option></select>
+                <button id="btn-cat">Add</button>
             </div>
-            <div id="custom-cats-list" style="font-size:0.8rem; background:var(--bg-color); padding:8px; border-radius:4px;"></div>
+            <div id="cat-chips"></div>
         </div>
-
-        <div class="settings-section">
-            <div class="settings-title">Category Micro-Budgets</div>
-            <p style="font-size:0.75rem; color:var(--text-sub); margin-bottom:4px;">Assign caps to specific expenses. Leave 0 for no cap.</p>
-            <div id="micro-budget-inputs" style="display:flex; flex-direction:column; gap:4px; max-height:150px; overflow-y:auto;"></div>
-        </div>
-
-        <div class="settings-section">
-            <div class="settings-title">Exchange Rates (to INR)</div>
-            <div style="display:flex; gap:8px;">
-                <div style="flex:1;"><label>1 USD</label><input type="number" id="rate-usd" style="width:100%;"></div>
-                <div style="flex:1;"><label>1 EUR</label><input type="number" id="rate-eur" style="width:100%;"></div>
-                <div style="flex:1;"><label>1 GBP</label><input type="number" id="rate-gbp" style="width:100%;"></div>
+        <div class="ss"><div class="st">📊 Category Budgets</div><p class="sd">Set per-category caps. Leave blank = no limit.</p><div id="mb-inputs" class="mbl2"></div></div>
+        <div class="ss">
+            <div class="st">💱 Exchange Rates → INR</div>
+            <div class="rg">
+                <div class="ri"><label>1 USD =</label><input type="number" id="r-usd" step="0.1"></div>
+                <div class="ri"><label>1 EUR =</label><input type="number" id="r-eur" step="0.1"></div>
+                <div class="ri"><label>1 GBP =</label><input type="number" id="r-gbp" step="0.1"></div>
             </div>
         </div>
-
-        <button class="submit-btn" id="btn-save-settings">Save Preferences</button>
+        <div class="ss">
+            <div class="st">📧 Monthly Email Report</div>
+            <p class="sd">Get a summary email on the 1st of every month. Requires Google Apps Script setup.</p>
+            <div class="ig" style="margin-bottom:8px"><label>Your Email</label><input type="email" id="s-email" placeholder="you@gmail.com"></div>
+            <div class="cbr"><input type="checkbox" id="s-email-on"><label for="s-email-on">Enable monthly email report</label></div>
+        </div>
+        <button class="sbtn" id="btn-save-s">💾 Save Preferences</button>
     </div>
 </div>
 
 <!-- GOAL MODAL -->
-<div class="modal-overlay" id="goal-modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            🎯 Set Savings Goal
-            <button class="close-modal" id="close-goal">✕</button>
-        </div>
-        <div class="input-group">
-            <label>Goal Name (e.g. 🚗 New Car)</label>
-            <input type="text" id="goal-name">
-        </div>
-        <div class="input-group">
-            <label>Target Amount (₹)</label>
-            <input type="number" id="goal-target">
-        </div>
-        <button class="submit-btn" id="btn-save-goal">Create Goal (Cloud)</button>
+<div class="mo" id="m-goal">
+    <div class="mc">
+        <div class="mh">🎯 Savings Goal <button class="mx" id="x-goal">✕</button></div>
+        <div class="ig"><label>Goal Name</label><input type="text" id="g-name" placeholder="e.g. 🚗 New Car"></div>
+        <div class="ig"><label>Target (₹)</label><input type="number" id="g-target" placeholder="100000"></div>
+        <button class="sbtn" id="btn-save-g">Create Goal ☁️</button>
+    </div>
+</div>
+
+<!-- SETTLE DEBT MODAL -->
+<div class="mo" id="m-settle">
+    <div class="mc">
+        <div class="mh">💰 Settle Debt <button class="mx" id="x-settle">✕</button></div>
+        <p class="sd" id="settle-info" style="margin-bottom:12px"></p>
+        <div class="ig"><label>Amount to Settle (₹)</label><input type="number" id="settle-amt" placeholder="0"></div>
+        <button class="sbtn" id="btn-settle">Settle & Log ☁️</button>
     </div>
 </div>
 

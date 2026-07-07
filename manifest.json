@@ -1,0 +1,16 @@
+{
+  "name": "Rupee Tracker Pro",
+  "short_name": "₹ Tracker",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1E1E2E",
+  "theme_color": "#4B2A8A",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
