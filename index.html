@@ -120,7 +120,7 @@
                 </div>
             </div>
             <div class="ig"><label>Account</label>
-                <select id="tx-acct"><option>🏦 Bank Account</option><option>💵 Cash</option><option>💳 Credit Card</option></select>
+                <select id="tx-acct"><option>🏦 Bank Account</option><option>📱 UPI</option><option>💵 Cash</option><option>💳 Credit Card</option></select>
             </div>
             <!-- Lend/Borrow fields -->
             <div id="lend-fields" style="display:none">
@@ -130,16 +130,21 @@
                 </div>
             </div>
             <div class="ig"><label>Note</label><input type="text" id="tx-note" placeholder="Description..." autocomplete="off"></div>
-            <div class="cbr">
-                <input type="checkbox" id="tx-rec">
-                <label for="tx-rec">🔄 Recurring</label>
-                <select id="tx-freq" class="cs" style="margin-left:8px;width:auto;display:none">
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly" selected>Monthly</option>
-                    <option value="yearly">Yearly</option>
-                </select>
-            </div>
+                    <div class="ig">
+                        <label class="cbr"><input type="checkbox" id="tx-rec"> 🔄 Recurring (Auto-log)</label>
+                        <div id="tx-rec-options" style="display:none; flex-direction:column; gap:8px; margin-bottom:12px;">
+                            <select id="tx-freq">
+                                <option value="daily">/ day (Daily)</option>
+                                <option value="weekly">/ week (Weekly)</option>
+                                <option value="monthly" selected>/ month (Monthly)</option>
+                                <option value="yearly">/ year (Yearly)</option>
+                            </select>
+                            <div style="display:flex; flex-direction:column; gap:4px">
+                                <label for="tx-rec-end" style="font-size:0.7rem">Repeat Until (Optional)</label>
+                                <input type="date" id="tx-rec-end">
+                            </div>
+                        </div>
+                    </div>
             <button class="sbtn" id="btn-save">Log & Sync ☁️</button>
             <button class="cbtn" id="btn-cancel">✕ Cancel Edit</button>
         </div>
