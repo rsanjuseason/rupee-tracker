@@ -214,8 +214,8 @@ function renderDash(){
     renderComparison(spend);
 
     // Budget
-    const cap=prefs.budget||1;const pct=Math.min(100,(spend/cap)*100);
-    $('b-spent').textContent=fINR(spend);$('b-cap').textContent=(prefs.budget||0).toLocaleString('en-IN');
+    const cap=getScaledBudget(prefs.budget||25000)||1;const pct=Math.min(100,(spend/cap)*100);
+    $('b-spent').textContent=fINR(spend);$('b-cap').textContent=fINR(cap).replace('₹','');
     $('b-pct').textContent=Math.round(pct)+'% used';
     const bar=$('b-bar');bar.style.width=pct+'%';
     bar.style.background=pct>90?'var(--red)':(pct>75?'var(--orange)':'var(--green)');
@@ -223,9 +223,11 @@ function renderDash(){
     // Micro budgets
     let mbH='';
     for(const[cat,bc]of Object.entries(prefs.catBudgets)){
-        if(!bc||bc<=0)continue;const cs=catT[cat]||0;const cp=Math.min(100,(cs/bc)*100);
+        if(!bc||bc<=0)continue;
+        const scaledBc = getScaledBudget(bc);
+        const cs=catT[cat]||0;const cp=Math.min(100,(cs/scaledBc)*100);
         const cc=cp>90?'var(--red)':(cp>60?'var(--orange)':'var(--purple)');
-        mbH+=`<div class="mbi"><div class="mbl"><span>${esc(cat)}</span><span>${fINR(cs)} / ${fINR(bc)}</span></div><div class="mbb"><div class="bf" style="width:${cp}%;background:${cc}"></div></div></div>`;
+        mbH+=`<div class="mbi"><div class="mbl"><span>${esc(cat)}</span><span>${fINR(cs)} / ${fINR(scaledBc)}</span></div><div class="mbb"><div class="bf" style="width:${cp}%;background:${cc}"></div></div></div>`;
     }
     $('micro-b').innerHTML=mbH||'<div class="es">No category budgets. Set in ⚙️ Settings.</div>';
 
@@ -269,22 +271,48 @@ function renderDailyChart(){
     </div>`;
 }
 
+function getScaledBudget(base) {
+    if (!base) return 0;
+    if (st.periodType === 'week') return base / 4.333;
+    if (st.periodType === 'year') return base * 12;
+    return base;
+}
+
 function renderComparison(currentSpend){
-    // Get last month's data
+    // Get last period's data
     const d=new Date(st.anchor);
-    const curM=d.getMonth(),curY=d.getFullYear();
-    const lastStart=new Date(curY,curM-1,1);const lastEnd=new Date(curY,curM,0);
-    const ls=dISO(lastStart);const le=dISO(lastEnd);
+    let ls, le, label = '';
+    
+    if (st.periodType === 'month') {
+        const lastStart = new Date(d.getFullYear(), d.getMonth()-1, 1);
+        const lastEnd = new Date(d.getFullYear(), d.getMonth(), 0);
+        ls = dISO(lastStart); le = dISO(lastEnd);
+        label = 'Month';
+    } else if (st.periodType === 'week') {
+        const day = d.getDay()||7;
+        const curStart = new Date(d); curStart.setDate(d.getDate() - day + 1);
+        const lastStart = new Date(curStart); lastStart.setDate(curStart.getDate() - 7);
+        const lastEnd = new Date(lastStart); lastEnd.setDate(lastStart.getDate() + 6);
+        ls = dISO(lastStart); le = dISO(lastEnd);
+        label = 'Week';
+    } else if (st.periodType === 'year') {
+        const lastStart = new Date(d.getFullYear() - 1, 0, 1);
+        const lastEnd = new Date(d.getFullYear() - 1, 11, 31);
+        ls = dISO(lastStart); le = dISO(lastEnd);
+        label = 'Year';
+    }
+    
     let lastSpend=0;
     raw.forEach(tx=>{if(tx.date>=ls&&tx.date<=le&&txSign(tx)<0)lastSpend+=toINR(tx);});
     const diff=currentSpend-lastSpend;const pct=lastSpend>0?Math.round(((diff)/lastSpend)*100):0;
     const arrow=diff>0?'📈':'📉';const badge=diff>0?`<span style="color:var(--red);font-size:.72rem;font-weight:700"> +${Math.abs(pct)}% ${arrow}</span>`:`<span style="color:var(--green);font-size:.72rem;font-weight:700"> ${pct}% ${arrow}</span>`;
 
     $('cmp-bars').innerHTML=`
-        <div class="cmp-bar this"><div class="cmp-label">This Month</div><div class="cmp-val cr">${fINR(currentSpend)}</div></div>
-        <div class="cmp-bar last"><div class="cmp-label">Last Month</div><div class="cmp-val" style="color:var(--text2)">${fINR(lastSpend)}</div></div>
+        <div class="cmp-bar this"><div class="cmp-label">This ${label}</div><div class="cmp-val cr">${fINR(currentSpend)}</div></div>
+        <div class="cmp-bar last"><div class="cmp-label">Last ${label}</div><div class="cmp-val" style="color:var(--text2)">${fINR(lastSpend)}</div></div>
     `;
-    if(st.periodType==='month') $('card-cmp').querySelector('.ct').innerHTML=`📅 Month Comparison ${badge}`;
+    const cardTitle = $('card-cmp').querySelector('.ct');
+    if (cardTitle) cardTitle.innerHTML=`📅 ${label} Comparison ${badge}`;
 }
 
 // ============================================================
@@ -298,7 +326,7 @@ function checkBudgetAlerts(){
     // Global budget
     let spend=0;
     filtered.forEach(tx=>{if(txSign(tx)<0)spend+=toINR(tx);});
-    const cap=prefs.budget||25000;
+    const cap=getScaledBudget(prefs.budget||25000);
     const pct=(spend/cap)*100;
     if(pct>=100) alerts.push({type:'danger',msg:`🚨 Budget EXCEEDED! You've spent ${fINR(spend)} of ${fINR(cap)} (${Math.round(pct)}%).`});
     else if(pct>=thresh) alerts.push({type:'warn',msg:`⚠️ You've used ${Math.round(pct)}% of your ${fINR(cap)} budget. ${fINR(cap-spend)} remaining.`});
@@ -308,9 +336,10 @@ function checkBudgetAlerts(){
     filtered.forEach(tx=>{if(tx.type==='expense'){const inr=toINR(tx);catT[tx.category]=(catT[tx.category]||0)+inr;}});
     for(const[cat,bc]of Object.entries(prefs.catBudgets)){
         if(!bc||bc<=0)continue;
-        const cs=catT[cat]||0;const cp=(cs/bc)*100;
-        if(cp>=100) alerts.push({type:'danger',msg:`🚨 ${cat} budget exceeded! ${fINR(cs)} / ${fINR(bc)}`});
-        else if(cp>=thresh) alerts.push({type:'warn',msg:`⚠️ ${cat}: ${Math.round(cp)}% used (${fINR(cs)} / ${fINR(bc)})`});
+        const scaledBc=getScaledBudget(bc);
+        const cs=catT[cat]||0;const cp=(cs/scaledBc)*100;
+        if(cp>=100) alerts.push({type:'danger',msg:`🚨 ${cat} budget exceeded! ${fINR(cs)} / ${fINR(scaledBc)}`});
+        else if(cp>=thresh) alerts.push({type:'warn',msg:`⚠️ ${cat}: ${Math.round(cp)}% used (${fINR(cs)} / ${fINR(scaledBc)})`});
     }
 
     el.innerHTML=alerts.map(a=>`<div class="alert-banner ${a.type}">${a.msg}</div>`).join('');
