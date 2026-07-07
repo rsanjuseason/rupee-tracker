@@ -535,7 +535,6 @@ function saveTx(){
         action:st.editId?'edit':'add',
         id:st.editId||(Date.now()+'_'+Math.random().toString(36).substr(2,5)),
         date, type:st.mode, category, mode:$('tx-mode').value,
-        account:$('tx-acct').value,
         person:$('tx-person')?.value||'', dueDate:$('tx-due')?.value||'',
         note, amount:amt, currency:$('tx-cur').value,
         recurring:$('tx-rec').checked,
@@ -571,7 +570,6 @@ function editTx(id){
     st.editId=id;st.mode=tx.type;updateModeUI();
     $('tx-date').value=tx.date;$('tx-amt').value=tx.amount;$('tx-cur').value=tx.currency||'INR';
     $('tx-cat').value=tx.category;$('tx-mode').value=tx.mode||'';
-    $('tx-acct').value=tx.account||'🏦 Bank Account';
     $('tx-note').value=tx.note||'';
     if($('tx-person'))$('tx-person').value=tx.person||'';
     if($('tx-due'))$('tx-due').value=tx.dueDate||'';
