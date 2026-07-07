@@ -2,7 +2,7 @@
 // RUPEE TRACKER PRO — FULL MODULAR ENGINE
 // ============================================================
 
-const CLOUD_URL = "https://script.google.com/macros/s/AKfycbzhp6FcY8xcxuaMw2aQG3TLhAFbn9FfT2AxrvF3l7I_GO78Sn3RPfpz5UtBvoe1FJWUBA/exec";
+const CLOUD_URL = "https://script.google.com/macros/s/AKfycbzMOoaLhkc_q7lWXJ39WN0TW9lzyCoQwuvd4Xh7APNp9nD2f_TJhriIGpiuk7kELFIVxQ/exec";
 
 // Default categories
 const CATS = {
@@ -84,7 +84,6 @@ function toINR(tx){const a=parseFloat(tx.amount)||0;const c=tx.currency||'INR';r
 function dISO(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function isoD(s){if(!s)return new Date();const p=s.split('-');return new Date(p[0],p[1]-1,p[2]);}
 function fINR(n){return '₹'+Math.round(Math.abs(n)).toLocaleString('en-IN');}
-function fDate(s){if(!s)return'';const p=s.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s;}
 function fShort(n){
     const a = Math.abs(n);
     if(a >= 10000000) return '₹' + (a / 10000000).toFixed(1).replace('.0','') + 'Cr';
@@ -92,6 +91,7 @@ function fShort(n){
     if(a >= 1000) return '₹' + (a / 1000).toFixed(1).replace('.0','') + 'k';
     return fINR(a);
 }
+function fDate(s){if(!s)return'';const p=s.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s;}
 
 function txSign(tx){
     if(tx.type==='expense')return -1;
@@ -167,6 +167,7 @@ function autoLogRecurring(){
         let currentTx = latestTx;
 
         while(nextStr <= todayStr){
+            if(currentTx.endDate && nextStr > currentTx.endDate) break;
             // Auto-generate missing entry
             const newTx={...currentTx};
             newTx.id=Date.now()+'_'+Math.random().toString(36).substr(2,5);
@@ -538,7 +539,8 @@ function saveTx(){
         person:$('tx-person')?.value||'', dueDate:$('tx-due')?.value||'',
         note, amount:amt, currency:$('tx-cur').value,
         recurring:$('tx-rec').checked,
-        frequency:$('tx-rec').checked?$('tx-freq').value:''
+        frequency:$('tx-rec').checked?$('tx-freq').value:'',
+        endDate:$('tx-rec').checked?$('tx-rec-end').value:''
     };
 
     if(p.action==='edit'){const i=raw.findIndex(t=>t.id===p.id);if(i>-1)raw[i]=p;}
@@ -558,7 +560,8 @@ function cancelEdit() {
     if($('tx-person'))$('tx-person').value='';
     if($('tx-due'))$('tx-due').value='';
     $('tx-rec').checked=false;
-    if($('tx-freq'))$('tx-freq').style.display='none';
+    if($('tx-rec-options'))$('tx-rec-options').style.display='none';
+    if($('tx-rec-end'))$('tx-rec-end').value='';
 }
 
 function editTx(id){
@@ -570,10 +573,18 @@ function editTx(id){
     $('tx-note').value=tx.note||'';
     if($('tx-person'))$('tx-person').value=tx.person||'';
     if($('tx-due'))$('tx-due').value=tx.dueDate||'';
-    $('tx-rec').checked=!!tx.recurring;
-    if(tx.recurring){$('tx-freq').value=tx.frequency||'monthly';$('tx-freq').style.display='inline-block';}
-    else {$('tx-freq').style.display='none';}
-    $('form-h').textContent='✏️ Editing Entry';$('btn-cancel').style.display='block';
+    $('tx-rec').checked=tx.recurring||false;
+    if(tx.recurring){
+        if($('tx-freq')) $('tx-freq').value=tx.frequency||'monthly';
+        if($('tx-rec-end')) $('tx-rec-end').value=tx.endDate||'';
+        if($('tx-rec-options')) $('tx-rec-options').style.display='flex';
+    }else{
+        if($('tx-rec-options')) $('tx-rec-options').style.display='none';
+    }
+    
+    $('form-h').textContent='✏️ Editing Entry';
+    $('btn-cancel').style.display='block';
+    // Switch to tab
     document.querySelector('.tab[data-t="t-entry"]').click();
     window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -646,8 +657,11 @@ function listen(){
         const note=$('tx-note').value;const smart=smartCat(note);
         if(smart){const sel=$('tx-cat');const opts=[...sel.options].map(o=>o.value);if(opts.includes(smart))sel.value=smart;}
     });
-
-    $('tx-rec').addEventListener('change',(e)=>{$('tx-freq').style.display=e.target.checked?'inline-block':'none';});
+    
+    // Sync input handlers
+    $('tx-rec').addEventListener('change',(e)=>{
+        if($('tx-rec-options')) $('tx-rec-options').style.display=e.target.checked?'flex':'none';
+    });
 
     $('btn-save').addEventListener('click',saveTx);
     $('btn-cancel').addEventListener('click', cancelEdit);
