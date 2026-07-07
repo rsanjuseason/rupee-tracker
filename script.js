@@ -6,7 +6,7 @@ const CLOUD_URL = "https://script.google.com/macros/s/AKfycbzhp6FcY8xcxuaMw2aQG3
 
 // Default categories
 const CATS = {
-    expense: ['🍔 Food & Dining','🛒 Groceries','🚗 Transport & Fuel','🛍️ Shopping','🏠 Rent & Utilities','🎮 Entertainment','🏥 Medical','🎓 Education','🔄 Subscriptions','✨ Misc'],
+    expense: ['🍔 Food & Dining', '🛒 Groceries', '🚗 Transport & Fuel', '🛍️ Shopping', '🏠 Rent & Utilities', '💳 EMI', '🏦 Loan Repayment', '💸 Credit Card Bill', '📱 Mobile Recharge', '🌐 Internet & Wi-Fi', '⚡ Electricity', '💧 Water Bill', '⛽ Fuel', '🚕 Taxi & Ride Sharing', '✈️ Travel', '🏨 Hotel & Stay', '🎮 Entertainment', '🎬 Movies', '🎵 Music', '📺 OTT Subscriptions', '🔄 Other Subscriptions', '🏥 Medical', '💊 Medicines', '🩺 Health Checkup', '🛡️ Insurance', '🎓 Education', '📚 Books & Study', '👕 Clothing', '💄 Personal Care', '💇 Salon & Grooming', '🏋️ Gym & Fitness', '🎁 Gifts & Donations', '👨‍👩‍👧 Family', '🐶 Pets', '🏡 Home Maintenance', '🛠️ Repairs', '💼 Business', '💰 Taxes', '💵 Cash Withdrawal', '📈 Investments', '💎 Savings', '🏦 Bank Charges', '📦 Courier & Shipping', '✨ Miscellaneous'],
     income: ['💰 Salary','💼 Freelance','📈 Investments','🎁 Gifts','🪙 Other'],
     lend: ['🤝 Lent Money','📥 Borrowed Money']
 };
