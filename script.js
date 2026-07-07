@@ -85,6 +85,13 @@ function dISO(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,
 function isoD(s){if(!s)return new Date();const p=s.split('-');return new Date(p[0],p[1]-1,p[2]);}
 function fINR(n){return '₹'+Math.round(Math.abs(n)).toLocaleString('en-IN');}
 function fDate(s){if(!s)return'';const p=s.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s;}
+function fShort(n){
+    const a = Math.abs(n);
+    if(a >= 10000000) return '₹' + (a / 10000000).toFixed(1).replace('.0','') + 'Cr';
+    if(a >= 100000) return '₹' + (a / 100000).toFixed(1).replace('.0','') + 'L';
+    if(a >= 1000) return '₹' + (a / 1000).toFixed(1).replace('.0','') + 'k';
+    return fINR(a);
+}
 
 function txSign(tx){
     if(tx.type==='expense')return -1;
@@ -238,7 +245,7 @@ function renderDash(){
     // Donut
     if(spend===0&&income===0){$('donut').innerHTML='<div class="es"><div class="es-i">📊</div>Log entries to see ratio.</div>';}
     else{const tot=spend+income;const ed=(spend/tot)*360;
-        $('donut').innerHTML=`<div class="dc"><div style="width:130px;height:130px;border-radius:50%;background:conic-gradient(var(--red) 0deg ${ed}deg,var(--green) ${ed}deg 360deg)"></div><div class="dh"><span>Net</span><strong>${(net>=0?'+':'-')}${fINR(Math.abs(net))}</strong></div></div><div class="dl"><span style="color:var(--red)">■ Spent ${Math.round((spend/tot)*100)}%</span><span style="color:var(--green)">■ Earned ${Math.round((income/tot)*100)}%</span></div>`;
+        $('donut').innerHTML=`<div class="dc"><div style="width:130px;height:130px;border-radius:50%;background:conic-gradient(var(--red) 0deg ${ed}deg,var(--green) ${ed}deg 360deg)"></div><div class="dh"><span>Net</span><strong>${(net>=0?'+':'-')}${fShort(net)}</strong></div></div><div class="dl"><span style="color:var(--red)">■ Spent ${Math.round((spend/tot)*100)}%</span><span style="color:var(--green)">■ Earned ${Math.round((income/tot)*100)}%</span></div>`;
     }
 }
 
