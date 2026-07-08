@@ -245,8 +245,10 @@
         <div class="ss">
             <div class="st">🛡️ Biometric App Lock</div>
             <p class="sd">Lock this app on startup using FaceID, Fingerprint, or your device PIN.</p>
-            <button class="sbtn" id="btn-setup-bio" style="background:var(--accent); color:white; margin-top:8px">Enable Biometric Lock</button>
-            <button class="sbtn" id="btn-remove-bio" style="background:#e74c3c; color:white; margin-top:8px; display:none">Disable Biometric Lock</button>
+            <div style="display:flex; justify-content:center; width:100%">
+                <button class="sbtn" id="btn-setup-bio" style="margin-top:8px; padding:6px 12px; font-size:0.85rem; width:auto; border-radius:6px">🔒 Enable Biometric Lock</button>
+                <button class="sbtn" id="btn-remove-bio" style="background:transparent; color:#e74c3c; border:1px solid #e74c3c; margin-top:8px; padding:6px 12px; font-size:0.85rem; width:auto; border-radius:6px; display:none">🔓 Disable Biometric Lock</button>
+            </div>
         </div>
         <button class="sbtn" id="btn-save-s">💾 Save Preferences</button>
     </div>
