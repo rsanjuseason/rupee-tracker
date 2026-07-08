@@ -839,11 +839,15 @@ function popMB(){
 }
 
 async function setupBiometrics() {
+    if (!window.PublicKeyCredential) {
+        alert("WebAuthn is not supported on this browser or device. Ensure you are using a modern browser (Chrome/Safari) and are on a secure HTTPS connection.");
+        return;
+    }
     try {
         const credential = await navigator.credentials.create({
             publicKey: {
                 challenge: crypto.getRandomValues(new Uint8Array(32)),
-                rp: { name: "Rupee Tracker Pro", id: window.location.hostname },
+                rp: { name: "Rupee Tracker Pro" },
                 user: { id: crypto.getRandomValues(new Uint8Array(16)), name: "user", displayName: "User" },
                 pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
                 authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
@@ -858,8 +862,8 @@ async function setupBiometrics() {
             openSettings();
         }
     } catch (e) {
-        console.error(e);
-        alert("Failed to setup Biometrics. Ensure your device supports it and you are on a secure HTTPS connection.");
+        console.error("WebAuthn Error:", e);
+        alert("Failed to setup Biometrics.\nReason: " + e.message + "\nName: " + e.name);
     }
 }
 

@@ -17,6 +17,11 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div id="lock-screen" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg); z-index:9999; flex-direction:column; align-items:center; justify-content:center;">
+    <div style="font-size:4rem; margin-bottom:20px;">🔒</div>
+    <h2 style="margin-bottom:30px; font-weight:600">App Locked</h2>
+    <button id="btn-unlock" class="sbtn" style="width:250px; font-size:1.1rem; padding:12px">Unlock with Biometrics</button>
+</div>
 <div class="app">
 
     <!-- HEADER -->
@@ -236,6 +241,12 @@
             <div class="st">🔒 Cloud PIN</div>
             <p class="sd">Set a PIN to secure your Google Sheet. If set here and in the Config sheet, all cloud requests will require it.</p>
             <input type="password" id="s-pin" placeholder="Enter PIN (e.g. 1234)" style="width:100%">
+        </div>
+        <div class="ss">
+            <div class="st">🛡️ Biometric App Lock</div>
+            <p class="sd">Lock this app on startup using FaceID, Fingerprint, or your device PIN.</p>
+            <button class="sbtn" id="btn-setup-bio" style="background:var(--accent); color:white; margin-top:8px">Enable Biometric Lock</button>
+            <button class="sbtn" id="btn-remove-bio" style="background:#e74c3c; color:white; margin-top:8px; display:none">Disable Biometric Lock</button>
         </div>
         <button class="sbtn" id="btn-save-s">💾 Save Preferences</button>
     </div>
