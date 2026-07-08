@@ -2,7 +2,7 @@
 // RUPEE TRACKER PRO — FULL MODULAR ENGINE
 // ============================================================
 
-const CLOUD_URL = "https://script.google.com/macros/s/AKfycbyDETsOt8v7gzT6c3Uuqebzcal8AbGGbP8g_VjdF0ffEq0X3tPbHIOHL546S3AbOcdd-g/exec";
+const CLOUD_URL = "https://script.google.com/macros/s/AKfycbzmHPseY_Ik4hzY1zdM4wF1phYOXSJTb2oYhRSVQlh0Ua3FvBc4TYxcSHVtkzl7b4Po1A/exec";
 
 // Default categories
 const CATS = {
@@ -34,7 +34,9 @@ let prefs = {
     theme:'light', budget:25000, threshold:80,
     email: '', emailEnabled: false,
     customCats:[], catBudgets:{},
-    rates:{ USD:83.5, EUR:90.2, GBP:105.1 }
+    rates:{ USD:83.5, EUR:90.2, GBP:105.1 },
+    cloudPin: "",
+    biometricId: null
 };
 
 const $=id=>document.getElementById(id);
@@ -47,7 +49,55 @@ function init(){
     loadPrefs(); applyTheme(); listen();
     $('tx-date').value=dISO(new Date());
     updatePeriodLabel(); popCats(); popMB();
-    if(CLOUD_URL!=="YOUR_GOOGLE_SCRIPT_WEB_APP_URL"&&CLOUD_URL!=="CLOUD_URL") pull();
+
+    const lockScreen = document.getElementById('lock-screen');
+    if(prefs.biometricId && lockScreen) {
+        lockScreen.style.display = 'flex';
+        const btnUnlock = document.getElementById('btn-unlock');
+        if(btnUnlock) {
+            btnUnlock.onclick = async () => {
+                try {
+                    const idBuffer = Uint8Array.from(atob(prefs.biometricId), c => c.charCodeAt(0));
+                    const assertion = await navigator.credentials.get({
+                        publicKey: {
+                            challenge: new Uint8Array(32),
+                            allowCredentials: [{ id: idBuffer, type: 'public-key' }],
+                            userVerification: 'required'
+                        }
+                    });
+                    if(assertion) {
+                        lockScreen.style.display = 'none';
+                        finishInit();
+                    }
+                } catch(e) {
+                    console.error("Biometric unlock failed:", e);
+                    alert("Unlock failed. Please try again.");
+                }
+            };
+            // Attempt auto-trigger
+            setTimeout(() => btnUnlock.click(), 300);
+        }
+    } else {
+        finishInit();
+    }
+}
+
+function finishInit(){
+    // Load local cache for instant rendering
+    try {
+        const cache = localStorage.getItem('tx_cache');
+        if(cache) {
+            const j = JSON.parse(cache);
+            if(j.raw) raw = j.raw;
+            if(j.goals) goals = j.goals;
+        }
+    } catch(e) {}
+    
+    renderAll(); // Render instantly using cache
+    
+    if(CLOUD_URL && CLOUD_URL !== "YOUR_GOOGLE_SCRIPT_WEB_APP_URL" && CLOUD_URL !== "CLOUD_URL") {
+        pull();
+    }
 }
 
 // ============================================================
@@ -62,18 +112,37 @@ function applyTheme(){
 }
 
 // ============================================================
-// CLOUD
+// CLOUD & CACHE
 // ============================================================
+function saveCache(){
+    localStorage.setItem('tx_cache', JSON.stringify({raw, goals}));
+}
 async function pull(){
     const b=$('btn-save');b.textContent='☁️ Pulling...';b.disabled=true;
-    try{const r=await fetch(CLOUD_URL);const j=await r.json();
-        if(j.status==='success'){raw=j.data.transactions||[];goals=j.data.goals||[];autoLogRecurring();renderAll();}
+    try{
+        let url = CLOUD_URL;
+        if(prefs.cloudPin) url += `?pin=${encodeURIComponent(prefs.cloudPin)}`;
+        const r=await fetch(url);
+        const j=await r.json();
+        if(j.status==='success'){
+            raw=j.data.transactions||[];
+            goals=j.data.goals||[];
+            autoLogRecurring();
+            saveCache();
+            renderAll();
+        } else if (j.status === 'error') {
+            console.error("Cloud Error:", j.message);
+            if (j.message.includes("Unauthorized")) alert("Cloud Sync Failed: Invalid PIN. Please update your PIN in Settings.");
+        }
     }catch(e){console.error(e);}
     b.textContent='Log & Sync ☁️';b.disabled=false;
 }
 async function push(p){
-    if(CLOUD_URL==="YOUR_GOOGLE_SCRIPT_WEB_APP_URL"||CLOUD_URL==="CLOUD_URL")return;
-    try{await fetch(CLOUD_URL,{method:'POST',body:JSON.stringify(p)});}catch(e){console.error(e);}
+    if(!CLOUD_URL || CLOUD_URL==="YOUR_GOOGLE_SCRIPT_WEB_APP_URL"||CLOUD_URL==="CLOUD_URL")return;
+    try{
+        if(prefs.cloudPin) p.pin = prefs.cloudPin;
+        await fetch(CLOUD_URL,{method:'POST',body:JSON.stringify(p)});
+    }catch(e){console.error(e);}
 }
 
 // ============================================================
@@ -544,10 +613,13 @@ function saveTx(){
 
     if(p.action==='edit'){const i=raw.findIndex(t=>t.id===p.id);if(i>-1)raw[i]=p;}
     else raw.push(p);
+
     if (p.recurring) {
         autoLogRecurring();
     }
+
     cancelEdit();
+    saveCache();
     renderAll();
     push(p);
 }
@@ -591,7 +663,10 @@ function editTx(id){
 
 function delTx(id){
     if(!confirm('Delete this entry?'))return;
-    raw=raw.filter(t=>t.id!==id);renderAll();push({action:'delete',id});
+    raw=raw.filter(t=>t.id!==id);
+    saveCache();
+    renderAll();
+    push({action:'delete',id});
 }
 
 // ============================================================
@@ -673,6 +748,10 @@ function listen(){
     $('x-settings').addEventListener('click',()=>$('m-settings').classList.remove('on'));
     $('btn-save-s').addEventListener('click',saveSettings);
     $('btn-cat').addEventListener('click',addCat);
+    
+    if($('btn-setup-bio')) $('btn-setup-bio').addEventListener('click', setupBiometrics);
+    if($('btn-remove-bio')) $('btn-remove-bio').addEventListener('click', removeBiometrics);
+    
     $('btn-sync').addEventListener('click',pull);
 
     // Theme
@@ -708,6 +787,18 @@ function openSettings(){
     $('r-usd').value=prefs.rates.USD;$('r-eur').value=prefs.rates.EUR;$('r-gbp').value=prefs.rates.GBP;
     if($('s-email'))$('s-email').value=prefs.email||'';
     if($('s-email-on'))$('s-email-on').checked=prefs.emailEnabled||false;
+    if($('s-pin'))$('s-pin').value=prefs.cloudPin||'';
+    
+    if($('btn-setup-bio') && $('btn-remove-bio')) {
+        if(prefs.biometricId) {
+            $('btn-setup-bio').style.display = 'none';
+            $('btn-remove-bio').style.display = 'block';
+        } else {
+            $('btn-setup-bio').style.display = 'block';
+            $('btn-remove-bio').style.display = 'none';
+        }
+    }
+    
     renderCatChips();popMB();$('m-settings').classList.add('on');
 }
 function saveSettings(){
@@ -718,11 +809,12 @@ function saveSettings(){
     prefs.rates.GBP=parseFloat($('r-gbp').value)||105.1;
     if($('s-email'))prefs.email=$('s-email').value;
     if($('s-email-on'))prefs.emailEnabled=$('s-email-on').checked;
+    if($('s-pin'))prefs.cloudPin=$('s-pin').value;
     document.querySelectorAll('.mb-input').forEach(i=>{const v=parseFloat(i.value);if(v>0)prefs.catBudgets[i.dataset.cat]=v;else delete prefs.catBudgets[i.dataset.cat];});
     savePrefs();
     
-    // Sync email config to backend
-    push({ action: 'save_prefs', email: prefs.email, emailEnabled: prefs.emailEnabled });
+    // Sync email config to backend (if URL exists)
+    if (CLOUD_URL) push({ action: 'save_prefs', email: prefs.email, emailEnabled: prefs.emailEnabled, pin: prefs.cloudPin });
     
     $('m-settings').classList.remove('on');
 }
@@ -744,6 +836,38 @@ function renderCatChips(){
 function popMB(){
     const el=$('mb-inputs');if(!el)return;const cats=allCats('expense');
     el.innerHTML=cats.map(c=>`<div class="mbr"><span>${esc(c)}</span><input type="number" class="mb-input" data-cat="${esc(c)}" value="${prefs.catBudgets[c]||''}" placeholder="₹ Cap"></div>`).join('');
+}
+
+async function setupBiometrics() {
+    try {
+        const credential = await navigator.credentials.create({
+            publicKey: {
+                challenge: crypto.getRandomValues(new Uint8Array(32)),
+                rp: { name: "Rupee Tracker Pro", id: window.location.hostname },
+                user: { id: crypto.getRandomValues(new Uint8Array(16)), name: "user", displayName: "User" },
+                pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+                authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+                timeout: 60000
+            }
+        });
+        if (credential) {
+            const rawId = new Uint8Array(credential.rawId);
+            prefs.biometricId = btoa(String.fromCharCode.apply(null, rawId));
+            savePrefs();
+            alert("Biometric Lock enabled successfully!");
+            openSettings();
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Failed to setup Biometrics. Ensure your device supports it and you are on a secure HTTPS connection.");
+    }
+}
+
+function removeBiometrics() {
+    prefs.biometricId = null;
+    savePrefs();
+    alert("Biometric Lock disabled.");
+    openSettings();
 }
 
 // ============================================================
