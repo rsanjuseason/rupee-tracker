@@ -51,7 +51,7 @@ function init(){
     updatePeriodLabel(); popCats(); popMB();
 
     const lockScreen = document.getElementById('lock-screen');
-    if(prefs.biometricId && lockScreen) {
+    if(prefs.biometricId && !sessionStorage.getItem('unlocked') && lockScreen) {
         lockScreen.style.display = 'flex';
         const btnUnlock = document.getElementById('btn-unlock');
         if(btnUnlock) {
@@ -66,6 +66,7 @@ function init(){
                         }
                     });
                     if(assertion) {
+                        sessionStorage.setItem('unlocked', '1');
                         lockScreen.style.display = 'none';
                         finishInit();
                     }
@@ -787,6 +788,7 @@ function openSettings(){
     $('r-usd').value=prefs.rates.USD;$('r-eur').value=prefs.rates.EUR;$('r-gbp').value=prefs.rates.GBP;
     if($('s-email'))$('s-email').value=prefs.email||'';
     if($('s-email-on'))$('s-email-on').checked=prefs.emailEnabled||false;
+    if($('s-cloud'))$('s-cloud').value=prefs.cloudUrl||'';
     if($('s-pin'))$('s-pin').value=prefs.cloudPin||'';
     
     if($('btn-setup-bio') && $('btn-remove-bio')) {
@@ -858,6 +860,8 @@ async function setupBiometrics() {
             const rawId = new Uint8Array(credential.rawId);
             prefs.biometricId = btoa(String.fromCharCode.apply(null, rawId));
             savePrefs();
+            // Automatically mark as unlocked so it doesn't lock right after setup
+            sessionStorage.setItem('unlocked', '1');
             alert("Biometric Lock enabled successfully!");
             openSettings();
         }
@@ -870,6 +874,7 @@ async function setupBiometrics() {
 function removeBiometrics() {
     prefs.biometricId = null;
     savePrefs();
+    sessionStorage.removeItem('unlocked');
     alert("Biometric Lock disabled.");
     openSettings();
 }
