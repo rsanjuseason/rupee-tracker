@@ -21,6 +21,12 @@
     <div style="font-size:4rem; margin-bottom:20px;">🔒</div>
     <h2 style="margin-bottom:30px; font-weight:600">App Locked</h2>
     <button id="btn-unlock" class="sbtn" style="width:250px; font-size:1.1rem; padding:12px">Unlock with Biometrics</button>
+    <div id="lock-pin-fallback" style="display:none; margin-top:24px; text-align:center;">
+        <p style="font-size:0.85rem; color:var(--muted); margin-bottom:10px;">Or unlock with your PIN</p>
+        <input type="password" id="lock-pin-input" placeholder="Enter PIN" inputmode="numeric" style="width:200px; padding:10px; border-radius:8px; border:1px solid var(--border); text-align:center; font-size:1.1rem; margin-bottom:10px;">
+        <br>
+        <button id="btn-pin-unlock" class="sbtn" style="width:200px; padding:10px; font-size:0.95rem; margin-top:4px;">Unlock with PIN</button>
+    </div>
 </div>
 <div class="app">
 
@@ -36,14 +42,14 @@
         </div>
     </header>
 
-    <!-- TABS -->
-    <div class="tabs">
-        <button class="tab on" data-t="t-dash">📊 Dashboard</button>
-        <button class="tab" data-t="t-entry">✍️ Entries</button>
-        <button class="tab" data-t="t-debt">🤝 Debts</button>
-        <button class="tab" data-t="t-sub">🔄 Recurring</button>
-        <button class="tab" data-t="t-goal">🎯 Goals</button>
-    </div>
+    <!-- BOTTOM NAV -->
+    <nav class="bottom-nav" id="bottom-nav">
+        <button class="bnav-item on" data-t="t-dash"><span class="bnav-icon">📊</span><span class="bnav-label">Dashboard</span></button>
+        <button class="bnav-item" data-t="t-entry"><span class="bnav-icon">✍️</span><span class="bnav-label">Entries</span></button>
+        <button class="bnav-item" data-t="t-debt"><span class="bnav-icon">🤝</span><span class="bnav-label">Debts</span></button>
+        <button class="bnav-item" data-t="t-sub"><span class="bnav-icon">🔄</span><span class="bnav-label">Recurring</span></button>
+        <button class="bnav-item" data-t="t-goal"><span class="bnav-icon">🎯</span><span class="bnav-label">Goals</span></button>
+    </nav>
 
     <!-- PERIOD NAV -->
     <div class="pn">
@@ -64,6 +70,9 @@
 
     <!-- DASHBOARD -->
     <div id="t-dash" class="tc on">
+        <!-- Smart Insights -->
+        <div id="insights" class="insight-list"></div>
+
         <div class="sg">
             <div class="sc" data-a="r"><div class="si">📉</div><div class="sl">Spent</div><div class="sv cr" id="s-spend">₹0</div></div>
             <div class="sc" data-a="g"><div class="si">💰</div><div class="sl">Earned</div><div class="sv cg" id="s-income">₹0</div></div>
@@ -71,6 +80,12 @@
             <div class="sc" data-a="o"><div class="si">☁️</div><div class="sl">All Entries</div><div class="sv co" id="s-total">0</div></div>
             <div class="sc" data-a="b"><div class="si">🏦</div><div class="sl">Net Worth</div><div class="sv cb" id="s-nw">₹0</div></div>
             <div class="sc" data-a="d"><div class="si">🤝</div><div class="sl">Active Debts</div><div class="sv cd2" id="s-debt">₹0</div></div>
+        </div>
+
+        <!-- Saving Streak -->
+        <div class="cd" id="card-streak">
+            <div class="ct">🔥 Saving Streak</div>
+            <div id="streak-card"></div>
         </div>
 
         <!-- Month Comparison -->
@@ -88,20 +103,38 @@
             <div id="micro-b" class="mb"></div>
         </div>
 
+        <!-- Account Balances -->
+        <div class="cd">
+            <div class="ct">🏦 Account Balances</div>
+            <div id="acct-balances" class="acct-list"></div>
+        </div>
+
         <!-- Daily Spending Chart -->
         <div class="cd">
             <div class="ct">📊 Daily Spending Trend</div>
             <div id="daily-chart"></div>
         </div>
 
+        <!-- Spending Heatmap -->
+        <div class="cd">
+            <div class="ct">📅 Spending Heatmap</div>
+            <div id="heatmap"></div>
+        </div>
+
         <div class="ip">
             <div class="cd"><div class="ct">📂 Top Categories</div><div id="cat-bars"></div></div>
-            <div class="cd"><div class="ct">💹 Income vs Expense</div><div id="donut"></div></div>
+            <div class="cd"><div class="ct">🍩 Category Breakdown</div><div id="cat-donut"></div></div>
         </div>
+        <div class="cd"><div class="ct">💹 Income vs Expense</div><div id="donut"></div></div>
     </div>
 
     <!-- ENTRIES -->
     <div id="t-entry" class="tc">
+        <!-- Quick Add Templates -->
+        <div class="cd" id="qa-section">
+            <div class="ct" style="display:flex;justify-content:space-between;align-items:center;">⚡ Quick Add <button class="ab" id="btn-save-tpl" title="Save current form as template">💾</button></div>
+            <div class="qa-bar" id="qa-bar"></div>
+        </div>
         <div class="cd" id="form-sec">
             <div class="ct" id="form-h" style="font-size:.95rem">✍️ Log Entry</div>
             <div class="tg">
@@ -118,9 +151,9 @@
             </div>
             <div class="fr">
                 <div class="ig"><label>Category</label><select id="tx-cat"></select></div>
-                <div class="ig"><label>Payment Mode</label>
-                    <select id="tx-mode">
-                        <option>📱 UPI / Bank</option><option>💵 Cash</option><option>💳 Credit Card</option><option>🏦 Bank Transfer</option>
+                <div class="ig"><label>Account</label>
+                    <select id="tx-acct">
+                        <option>🏦 Bank Account</option><option>💵 Cash</option><option>💳 Credit Card</option><option>📱 UPI Wallet</option><option>💰 Savings</option>
                     </select>
                 </div>
             </div>
