@@ -93,9 +93,10 @@ function init(){
 
         // PIN fallback unlock handler
         const btnPinUnlock = document.getElementById('btn-pin-unlock');
+        const pinInput = document.getElementById('lock-pin-input');
         if(btnPinUnlock) {
             btnPinUnlock.onclick = () => {
-                const enteredPin = document.getElementById('lock-pin-input')?.value || '';
+                const enteredPin = pinInput?.value || '';
                 if(enteredPin && enteredPin === prefs.cloudPin) {
                     sessionStorage.setItem('unlocked', '1');
                     lockScreen.style.display = 'none';
@@ -104,6 +105,14 @@ function init(){
                     alert('Incorrect PIN. Please try again.');
                 }
             };
+            if(pinInput) {
+                pinInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        btnPinUnlock.click();
+                    }
+                });
+            }
         }
     } else {
         finishInit();
@@ -1285,11 +1294,6 @@ function fireConfetti(){
     }
     setTimeout(()=>container.remove(),4000);
 }
-
-// ============================================================
-init();
-// Setup collapsible after DOM is ready
-setTimeout(setupCollapsible, 500);
 
 // ============================================================
 init();
