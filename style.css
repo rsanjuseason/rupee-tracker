@@ -197,3 +197,121 @@ input:focus,select:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(11
 
 /* RESPONSIVE */
 @media(max-width:400px){.app{padding:12px 12px 80px}.sv{font-size:1rem}.fr{flex-direction:column;gap:0}.tab{padding:6px 10px;font-size:.74rem}.pl{font-size:.88rem}.rg{grid-template-columns:1fr 1fr}}
+
+/* ============================================================
+   QUICK-ADD TEMPLATES
+   ============================================================ */
+.qa-bar{display:flex;gap:8px;overflow-x:auto;padding:8px 0;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.qa-bar::-webkit-scrollbar{display:none;}
+.qa-chip{display:flex;align-items:center;gap:4px;padding:6px 14px;border-radius:20px;background:var(--card);border:1px solid var(--border);font-size:.78rem;white-space:nowrap;cursor:pointer;transition:all .2s;flex-shrink:0;}
+.qa-chip:hover,.qa-chip:active{background:var(--purple);color:#fff;border-color:var(--purple);}
+.qa-chip .qa-amt{font-weight:700;}
+.qa-chip .qa-del{font-size:.65rem;margin-left:4px;opacity:.5;cursor:pointer;}
+.qa-chip .qa-del:hover{opacity:1;color:var(--red);}
+.qa-add-chip{background:transparent;border:1px dashed var(--border);color:var(--muted);}
+.qa-add-chip:hover{border-color:var(--purple);color:var(--purple);background:transparent;}
+
+/* ============================================================
+   CATEGORY DONUT CHART
+   ============================================================ */
+.cat-donut-wrap{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;padding:10px 0;}
+.cat-donut-ring{width:140px;height:140px;border-radius:50%;position:relative;}
+.cat-donut-hole{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:80px;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.cat-donut-hole span{font-size:.65rem;color:var(--muted);}
+.cat-donut-hole strong{font-size:.9rem;}
+.cat-legend{display:flex;flex-direction:column;gap:6px;}
+.cat-legend-item{display:flex;align-items:center;gap:6px;font-size:.76rem;}
+.cat-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+
+/* ============================================================
+   SPENDING HEATMAP CALENDAR
+   ============================================================ */
+.hm-wrap{padding:10px 0;}
+.hm-labels{display:flex;gap:2px;margin-bottom:4px;}
+.hm-labels span{flex:1;text-align:center;font-size:.6rem;color:var(--muted);}
+.hm-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.hm-cell{aspect-ratio:1;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.62rem;color:var(--text2);cursor:default;position:relative;transition:transform .15s;}
+.hm-cell:hover{transform:scale(1.15);z-index:2;}
+.hm-cell[title]:hover::after{content:attr(title);position:absolute;bottom:110%;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:3px 8px;border-radius:4px;font-size:.62rem;white-space:nowrap;z-index:10;pointer-events:none;}
+.hm-0{background:var(--border);opacity:.3;}
+.hm-1{background:#c4b5fd;}
+.hm-2{background:#a78bfa;}
+.hm-3{background:#8b5cf6;}
+.hm-4{background:#7c3aed;color:#fff;}
+.hm-empty{background:transparent;}
+.hm-scale{display:flex;align-items:center;gap:4px;justify-content:flex-end;margin-top:8px;font-size:.6rem;color:var(--muted);}
+.hm-scale-box{width:12px;height:12px;border-radius:2px;}
+[data-theme="dark"] .hm-1{background:#4c1d95;}
+[data-theme="dark"] .hm-2{background:#6d28d9;}
+[data-theme="dark"] .hm-3{background:#7c3aed;}
+[data-theme="dark"] .hm-4{background:#8b5cf6;color:#fff;}
+
+/* ============================================================
+   SMART INSIGHTS
+   ============================================================ */
+.insight-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+.insight-banner{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;font-size:.78rem;line-height:1.4;background:linear-gradient(135deg,rgba(139,92,246,.08),rgba(139,92,246,.02));border:1px solid rgba(139,92,246,.15);}
+.insight-banner .ins-icon{font-size:1.1rem;flex-shrink:0;}
+.insight-banner .ins-text{flex:1;}
+[data-theme="dark"] .insight-banner{background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(139,92,246,.05));border-color:rgba(139,92,246,.25);}
+
+/* ============================================================
+   ACCOUNT BALANCES
+   ============================================================ */
+.acct-list{display:flex;flex-direction:column;gap:8px;}
+.acct-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--border);}
+.acct-name{font-size:.82rem;font-weight:500;}
+.acct-bal{font-size:.85rem;font-weight:700;}
+.acct-bal.positive{color:var(--green);}
+.acct-bal.negative{color:var(--red);}
+
+/* ============================================================
+   SAVING STREAKS
+   ============================================================ */
+.streak-wrap{display:flex;align-items:center;gap:16px;padding:10px 0;}
+.streak-fire{font-size:2.5rem;line-height:1;}
+.streak-info{flex:1;}
+.streak-num{font-size:2rem;font-weight:800;line-height:1;background:linear-gradient(135deg,var(--purple),#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.streak-label{font-size:.78rem;color:var(--muted);margin-top:2px;}
+.streak-meta{font-size:.7rem;color:var(--muted);margin-top:6px;}
+.streak-best{display:inline-block;background:rgba(245,158,11,.1);padding:2px 8px;border-radius:10px;font-size:.68rem;color:#f59e0b;font-weight:600;margin-top:4px;}
+@keyframes flame{0%,100%{transform:scale(1);}50%{transform:scale(1.1) rotate(-3deg);}}
+.streak-active .streak-fire{animation:flame 1.5s ease-in-out infinite;}
+
+/* ============================================================
+   BOTTOM NAVIGATION BAR
+   ============================================================ */
+.tabs{display:none !important;} /* Hide old tabs if any remain */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-around;align-items:center;background:var(--card);border-top:1px solid var(--border);padding:6px 0 env(safe-area-inset-bottom,6px);z-index:999;box-shadow:0 -2px 12px rgba(0,0,0,.08);}
+.bnav-item{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;padding:4px 8px;cursor:pointer;color:var(--muted);transition:all .2s;-webkit-tap-highlight-color:transparent;font-family:inherit;min-width:0;flex:1;}
+.bnav-item .bnav-icon{font-size:1.25rem;line-height:1;transition:transform .2s;}
+.bnav-item .bnav-label{font-size:.6rem;font-weight:500;white-space:nowrap;}
+.bnav-item.on{color:var(--purple);}
+.bnav-item.on .bnav-icon{transform:scale(1.15);}
+.bnav-item:active .bnav-icon{transform:scale(.9);}
+[data-theme="dark"] .bottom-nav{box-shadow:0 -2px 12px rgba(0,0,0,.3);}
+.app{padding-bottom:70px;} /* Space for bottom nav */
+
+/* ============================================================
+   TRANSACTION DATE GROUPING
+   ============================================================ */
+.date-group{margin-top:12px;}
+.date-group:first-child{margin-top:0;}
+.date-header{position:sticky;top:0;z-index:5;padding:6px 12px;font-size:.72rem;font-weight:600;color:var(--muted);background:var(--bg);border-bottom:1px solid var(--border);margin-bottom:4px;display:flex;justify-content:space-between;}
+.date-header .dh-total{color:var(--red);font-weight:700;}
+
+/* ============================================================
+   COLLAPSIBLE CARDS
+   ============================================================ */
+.ct{cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;}
+.ct::after{content:'▾';font-size:.7rem;color:var(--muted);transition:transform .3s;margin-left:8px;}
+.cd.collapsed .ct::after{transform:rotate(-90deg);}
+.cd.collapsed .cd-body{display:none;}
+.cd-body{transition:all .3s;}
+
+/* ============================================================
+   CONFETTI
+   ============================================================ */
+.confetti-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10000;overflow:hidden;}
+.confetti-piece{position:absolute;width:10px;height:10px;top:-10px;opacity:1;}
+@keyframes confetti-fall{0%{transform:translateY(0) rotate(0deg) scale(1);opacity:1;}100%{transform:translateY(100vh) rotate(720deg) scale(0.3);opacity:0;}}
