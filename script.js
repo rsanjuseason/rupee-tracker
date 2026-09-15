@@ -1,8 +1,9 @@
 // ============================================================
 // RUPEE TRACKER PRO — FULL MODULAR ENGINE
 // ============================================================
+//https://script.google.com/macros/s/AKfycbzmHPseY_Ik4hzY1zdM4wF1phYOXSJTb2oYhRSVQlh0Ua3FvBc4TYxcSHVtkzl7b4Po1A/exec
 
-const CLOUD_URL = "https://script.google.com/macros/s/AKfycbzmHPseY_Ik4hzY1zdM4wF1phYOXSJTb2oYhRSVQlh0Ua3FvBc4TYxcSHVtkzl7b4Po1A/exec";
+const CLOUD_URL = "https://script.google.com/macros/s/AKfycbzsChToS6DsdKP7jMpTc_vgjC1iCLuVzxPtevlCnAnDkvlmtBDqPinV8IYE0-S09Jf3Wg/exec";
 
 // Default categories
 const CATS = {
@@ -53,6 +54,10 @@ function init(){
     const lockScreen = document.getElementById('lock-screen');
     if(prefs.biometricId && !sessionStorage.getItem('unlocked') && lockScreen) {
         lockScreen.style.display = 'flex';
+        // Show PIN fallback if a cloud PIN is configured
+        const pinFallback = document.getElementById('lock-pin-fallback');
+        if(pinFallback && prefs.cloudPin) pinFallback.style.display = 'block';
+
         const btnUnlock = document.getElementById('btn-unlock');
         if(btnUnlock) {
             btnUnlock.onclick = async () => {
@@ -60,9 +65,10 @@ function init(){
                     const idBuffer = Uint8Array.from(atob(prefs.biometricId), c => c.charCodeAt(0));
                     const assertion = await navigator.credentials.get({
                         publicKey: {
-                            challenge: new Uint8Array(32),
+                            challenge: crypto.getRandomValues(new Uint8Array(32)),
                             allowCredentials: [{ id: idBuffer, type: 'public-key' }],
-                            userVerification: 'required'
+                            userVerification: 'required',
+                            timeout: 60000
                         }
                     });
                     if(assertion) {
@@ -72,11 +78,32 @@ function init(){
                     }
                 } catch(e) {
                     console.error("Biometric unlock failed:", e);
-                    alert("Unlock failed. Please try again.");
+                    // Show PIN fallback on failure if available
+                    if(pinFallback && prefs.cloudPin) {
+                        pinFallback.style.display = 'block';
+                        alert("Biometric unlock failed. You can use your PIN instead.");
+                    } else {
+                        alert("Unlock failed. Please try again.");
+                    }
                 }
             };
-            // Attempt auto-trigger
-            setTimeout(() => btnUnlock.click(), 300);
+            // Attempt auto-trigger biometric prompt
+            setTimeout(() => btnUnlock.click(), 500);
+        }
+
+        // PIN fallback unlock handler
+        const btnPinUnlock = document.getElementById('btn-pin-unlock');
+        if(btnPinUnlock) {
+            btnPinUnlock.onclick = () => {
+                const enteredPin = document.getElementById('lock-pin-input')?.value || '';
+                if(enteredPin && enteredPin === prefs.cloudPin) {
+                    sessionStorage.setItem('unlocked', '1');
+                    lockScreen.style.display = 'none';
+                    finishInit();
+                } else {
+                    alert('Incorrect PIN. Please try again.');
+                }
+            };
         }
     } else {
         finishInit();
@@ -211,7 +238,7 @@ function updatePeriodLabel(){
 // ============================================================
 // RENDER ALL
 // ============================================================
-function renderAll(){filter();renderDash();renderEntries();renderDebts();renderSubs();renderGoals();checkBudgetAlerts();}
+function renderAll(){filter();renderDash();renderEntries();renderDebts();renderSubs();renderGoals();checkBudgetAlerts();renderTemplates();}
 
 function getNextDate(dateStr, freq){
     const d=isoD(dateStr);
@@ -279,10 +306,10 @@ function renderDash(){
     $('s-nw').textContent=(nw>=0?'+':'-')+fINR(Math.abs(nw));
     $('s-nw').className='sv '+(nw>=0?'cg':'cr');
 
-    // Active debts
+    // Active debts (exclude settled)
     const debts=calcDebts();
     let totalDebt=0;
-    Object.values(debts).forEach(d=>{totalDebt+=Math.abs(d.net);});
+    Object.values(debts).forEach(d=>{if(Math.abs(d.net)>=1)totalDebt+=Math.abs(d.net);});
     $('s-debt').textContent=fINR(totalDebt);
 
     // Daily Chart
@@ -318,6 +345,13 @@ function renderDash(){
     else{const tot=spend+income;const ed=(spend/tot)*360;
         $('donut').innerHTML=`<div class="dc"><div style="width:130px;height:130px;border-radius:50%;background:conic-gradient(var(--red) 0deg ${ed}deg,var(--green) ${ed}deg 360deg)"></div><div class="dh"><span>Net</span><strong>${(net>=0?'+':'-')}${fShort(net)}</strong></div></div><div class="dl"><span style="color:var(--red)">■ Spent ${Math.round((spend/tot)*100)}%</span><span style="color:var(--green)">■ Earned ${Math.round((income/tot)*100)}%</span></div>`;
     }
+
+    // New features
+    renderCatDonut(catT, spend);
+    renderHeatmap();
+    renderInsights(spend, income, catT);
+    renderAccountBalances();
+    renderStreak();
 }
 
 function renderDailyChart(){
@@ -430,18 +464,46 @@ function renderEntries(){
     const list=$('tx-list');
     if(!filtered.length){list.innerHTML='<div class="es"><div class="es-i">📒</div>No records this period.</div>';return;}
 
-    list.innerHTML=filtered.map(tx=>{
-        const inr=toINR(tx);const s=txSign(tx);const sc=s<0?'-':'+';const cc=txColor(tx);
-        const icon=tx.type==='expense'?'📉':(tx.type==='income'?'💰':(s<0?'🤝':'📥'));
-        const cur=(tx.currency&&tx.currency!=='INR')?`<span class="tl-t">${tx.amount} ${tx.currency}</span>`:'';
-        const freq=tx.frequency||'monthly';
-        const freqCap=freq.charAt(0).toUpperCase()+freq.slice(1);
-        const rec=tx.recurring?`<span class="tl-t">🔄 ${esc(freqCap)}</span>`:'';
-        const per=tx.person?`<span class="tl-t">👤 ${esc(tx.person)}</span>`:'';
-        const acct=tx.account?`<span class="tl-t">${esc(tx.account)}</span>`:'';
-        const sid=esc(tx.id);
-        return `<div class="ti t-${tx.type}"><div class="tl-l"><div class="tl-c">${icon} ${esc(tx.category)}</div><div class="tl-m">${esc(tx.note||tx.mode||'')} ${per} ${acct} ${rec} ${cur}</div><div class="tl-x"><button class="ab" onclick="editTx('${sid}')" title="Edit">✏️</button><button class="ab del" onclick="delTx('${sid}')" title="Delete">🗑️</button></div></div><div class="tl-r"><div class="tl-a ${cc}">${sc}${fINR(inr)}</div><div class="tl-d">${fDate(tx.date)}</div></div></div>`;
-    }).join('');
+    // Group by date
+    const groups={};
+    filtered.forEach(tx=>{
+        const d=tx.date;
+        if(!groups[d])groups[d]=[];
+        groups[d].push(tx);
+    });
+
+    const today=dISO(new Date());
+    const yd=dISO(new Date(Date.now()-86400000));
+
+    let html='';
+    Object.keys(groups).sort((a,b)=>b.localeCompare(a)).forEach(date=>{
+        const txs=groups[date];
+        // Date label
+        let label;
+        if(date===today) label='Today';
+        else if(date===yd) label='Yesterday';
+        else label=fDate(date);
+        // Daily total
+        let daySpend=0;
+        txs.forEach(tx=>{if(txSign(tx)<0)daySpend+=toINR(tx);});
+        const dayTotal=daySpend>0?`<span class="dh-total">-${fINR(daySpend)}</span>`:'';
+
+        html+=`<div class="date-group"><div class="date-header"><span>${label}</span>${dayTotal}</div>`;
+        txs.forEach(tx=>{
+            const inr=toINR(tx);const s=txSign(tx);const sc=s<0?'-':'+';const cc=txColor(tx);
+            const icon=tx.type==='expense'?'📉':(tx.type==='income'?'💰':(s<0?'🤝':'📥'));
+            const cur=(tx.currency&&tx.currency!=='INR')?`<span class="tl-t">${tx.amount} ${tx.currency}</span>`:'';
+            const freq=tx.frequency||'monthly';
+            const freqCap=freq.charAt(0).toUpperCase()+freq.slice(1);
+            const rec=tx.recurring?`<span class="tl-t">🔄 ${esc(freqCap)}</span>`:'';
+            const per=tx.person?`<span class="tl-t">👤 ${esc(tx.person)}</span>`:'';
+            const acct=(tx.account||tx.mode)?`<span class="tl-t">${esc(tx.account||tx.mode)}</span>`:'';
+            const sid=esc(tx.id);
+            html+=`<div class="ti t-${tx.type}"><div class="tl-l"><div class="tl-c">${icon} ${esc(tx.category)}</div><div class="tl-m">${esc(tx.note||'')} ${per} ${acct} ${rec} ${cur}</div><div class="tl-x"><button class="ab" onclick="editTx('${sid}')" title="Edit">✏️</button><button class="ab del" onclick="delTx('${sid}')" title="Delete">🗑️</button></div></div><div class="tl-r"><div class="tl-a ${cc}">${sc}${fINR(inr)}</div></div></div>`;
+        });
+        html+='</div>';
+    });
+    list.innerHTML=html;
 }
 
 // ============================================================
@@ -454,7 +516,16 @@ function calcDebts(){
         if(!debts[person]) debts[person]={lent:0,borrowed:0,settled:0,net:0,lastDate:tx.date,dueDate:tx.dueDate||''};
         const inr=toINR(tx);
         const cat=(tx.category||'').toLowerCase();
-        if(cat.includes('lent')){
+        const isSettlement=(tx.note||'').toLowerCase().startsWith('settlement:');
+        if(isSettlement){
+            // Settlement transactions adjust net but are tracked under 'settled'
+            debts[person].settled+=inr;
+            if(cat.includes('borrow')){
+                debts[person].net-=inr;
+            } else if(cat.includes('lent')){
+                debts[person].net+=inr;
+            }
+        } else if(cat.includes('lent')){
             debts[person].lent+=inr;
             debts[person].net+=inr; // they owe you
         } else if(cat.includes('borrow')){
@@ -475,19 +546,30 @@ function renderDebts(){
     const entries=Object.entries(debts);
 
     let theyOwe=0,youOwe=0;
-    entries.forEach(([_,d])=>{if(d.net>0)theyOwe+=d.net;else youOwe+=Math.abs(d.net);});
+    entries.forEach(([_,d])=>{if(Math.abs(d.net)<1)return;if(d.net>0)theyOwe+=d.net;else youOwe+=Math.abs(d.net);});
     $('d-owed').textContent=fINR(theyOwe);
     $('d-owes').textContent=fINR(youOwe);
 
     if(!entries.length){list.innerHTML='<div class="es"><div class="es-i">🤝</div>No lending/borrowing records. Use Lend/Borrow mode when logging.</div>';return;}
 
-    list.innerHTML=entries.sort((a,b)=>Math.abs(b[1].net)-Math.abs(a[1].net)).map(([person,d])=>{
+    const activeEntries=entries.filter(([_,d])=>Math.abs(d.net)>=1);
+    if(!activeEntries.length){list.innerHTML='<div class="es"><div class="es-i">✅</div>All debts settled! No outstanding balances.</div>';return;}
+
+    list.innerHTML=activeEntries.sort((a,b)=>Math.abs(b[1].net)-Math.abs(a[1].net)).map(([person,d])=>{
         const isSettled=Math.abs(d.net)<1;
         const statusClass=isSettled?'settled':(d.net>0?'owed':'owes');
         const statusText=isSettled?'✅ Settled':(d.net>0?`They owe you`:`You owe them`);
-        const dueStr=d.dueDate?`<div class="debt-detail">Due: ${fDate(d.dueDate)} ${isoD(d.dueDate)<new Date()?'⚠️ Overdue':''}</div>`:'';
+        const dueStr=(!isSettled&&d.dueDate)?`<div class="debt-detail">Due: ${fDate(d.dueDate)} ${isoD(d.dueDate)<new Date()?'⚠️ Overdue':''}</div>`:'';
         const settleBtn=!isSettled?`<button class="settle-btn" onclick="openSettle('${esc(person)}',${d.net})">💰 Settle</button>`:'';
-        return `<div class="debt-card"><div class="debt-left"><div class="debt-name">👤 ${esc(person)}</div><div class="debt-detail">Lent: ${fINR(d.lent)} · Borrowed: ${fINR(d.borrowed)}</div>${dueStr}<div class="debt-status ${statusClass}">${statusText}</div>${settleBtn}</div><div class="debt-right"><div class="debt-amt ${d.net>0?'cg':'cr'}">${d.net>0?'+':'-'}${fINR(Math.abs(d.net))}</div></div></div>`;
+        const detailParts=[];
+        if(d.lent>0) detailParts.push(`Lent: ${fINR(d.lent)}`);
+        if(d.borrowed>0) detailParts.push(`Borrowed: ${fINR(d.borrowed)}`);
+        if(d.settled>0) detailParts.push(`Settled: ${fINR(d.settled)}`);
+        const detailStr=detailParts.join(' · ')||'No transactions';
+        const amtClass=isSettled?'':(d.net>0?'cg':'cr');
+        const amtStyle=isSettled?'style="color:var(--muted)"':'';
+        const amtText=isSettled?'₹0':`${d.net>0?'+':'-'}${fINR(Math.abs(d.net))}`;
+        return `<div class="debt-card"><div class="debt-left"><div class="debt-name">👤 ${esc(person)}</div><div class="debt-detail">${detailStr}</div>${dueStr}<div class="debt-status ${statusClass}">${statusText}</div>${settleBtn}</div><div class="debt-right"><div class="debt-amt ${amtClass}" ${amtStyle}>${amtText}</div></div></div>`;
     }).join('');
 }
 
@@ -500,8 +582,12 @@ function openSettle(person,net){
 }
 
 function doSettle(){
-    const amt=parseFloat($('settle-amt').value);
+    let amt=parseFloat($('settle-amt').value);
     if(!amt||amt<=0)return alert('Enter a valid amount');
+
+    // Cap at outstanding amount to prevent over-settlement
+    const outstanding=Math.abs(settlingNet);
+    if(amt>outstanding){amt=outstanding;}
 
     // Create a settlement transaction
     const isTheyOwe=settlingNet>0;
@@ -513,14 +599,9 @@ function doSettle(){
         amount:amt, currency:'INR', recurring:false, account:'🏦 Bank Account'
     };
 
-    // Wait — for a settlement, if they owe me and they're paying back, that's income for me
-    // If I owe them and I'm paying back, that's expense for me
-    // But we need to track it in the debt ledger, so let's use the reverse lend category
-    // If they owe me (net>0) and they return money → log as "Borrowed Money" (incoming = +) to reduce their debt
-    // If I owe them (net<0) and I pay them → log as "Lent Money" (outgoing = -) to reduce my debt
-
     raw.push(payload);
     push(payload);
+    saveCache();
     $('m-settle').classList.remove('on');
     renderAll();
 }
@@ -601,15 +682,17 @@ function saveTx(){
         }
     }
 
+    const acct=$('tx-acct')?.value||'🏦 Bank Account';
     const p={
         action:st.editId?'edit':'add',
         id:st.editId||(Date.now()+'_'+Math.random().toString(36).substr(2,5)),
-        date, type:st.mode, category, mode:$('tx-mode').value,
+        date, type:st.mode, category, mode:acct,
         person:$('tx-person')?.value||'', dueDate:$('tx-due')?.value||'',
         note, amount:amt, currency:$('tx-cur').value,
         recurring:$('tx-rec').checked,
         frequency:$('tx-rec').checked?$('tx-freq').value:'',
-        endDate:$('tx-rec').checked?$('tx-rec-end').value:''
+        endDate:$('tx-rec').checked?$('tx-rec-end').value:'',
+        account:acct
     };
 
     if(p.action==='edit'){const i=raw.findIndex(t=>t.id===p.id);if(i>-1)raw[i]=p;}
@@ -633,6 +716,7 @@ function cancelEdit() {
     $('tx-note').value='';
     if($('tx-person'))$('tx-person').value='';
     if($('tx-due'))$('tx-due').value='';
+    if($('tx-acct'))$('tx-acct').selectedIndex=0;
     $('tx-rec').checked=false;
     if($('tx-rec-options'))$('tx-rec-options').style.display='none';
     if($('tx-rec-end'))$('tx-rec-end').value='';
@@ -642,7 +726,8 @@ function editTx(id){
     const tx=raw.find(t=>t.id===id);if(!tx)return;
     st.editId=id;st.mode=tx.type;updateModeUI();
     $('tx-date').value=tx.date;$('tx-amt').value=tx.amount;$('tx-cur').value=tx.currency||'INR';
-    $('tx-cat').value=tx.category;$('tx-mode').value=tx.mode||'';
+    $('tx-cat').value=tx.category;
+    if($('tx-acct'))$('tx-acct').value=tx.account||tx.mode||'🏦 Bank Account';
     $('tx-note').value=tx.note||'';
     if($('tx-person'))$('tx-person').value=tx.person||'';
     if($('tx-due'))$('tx-due').value=tx.dueDate||'';
@@ -658,7 +743,7 @@ function editTx(id){
     $('form-h').textContent='✏️ Editing Entry';
     $('btn-cancel').style.display='block';
     // Switch to tab
-    document.querySelector('.tab[data-t="t-entry"]').click();
+    document.querySelector('.bnav-item[data-t="t-entry"]').click();
     window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -687,9 +772,12 @@ function contribute(id,name){
     const amt=prompt(`Contribute to "${name}" — amount (₹):`);
     if(!amt||isNaN(amt)||parseFloat(amt)<=0)return;const val=parseFloat(amt);
     const gi=goals.findIndex(x=>x.id===id);
+    const wasDone=gi>-1&&goals[gi].current>=goals[gi].target;
     if(gi>-1){goals[gi].current+=val;push({action:'contribute_goal',id:goals[gi].id,name:goals[gi].name,target:goals[gi].target,current:goals[gi].current});}
     const tp={action:'add',id:Date.now()+'_c',date:dISO(new Date()),type:'expense',category:'✨ Misc',mode:'📱 UPI / Bank',note:`🎯 Goal: ${name}`,amount:val,currency:'INR',recurring:false,account:'🏦 Bank Account'};
     raw.push(tp);push(tp);renderAll();
+    // 🎊 Confetti when goal just completed
+    if(gi>-1&&!wasDone&&goals[gi].current>=goals[gi].target) fireConfetti();
 }
 
 // ============================================================
@@ -706,9 +794,9 @@ function exportCSV(){
 // LISTENERS
 // ============================================================
 function listen(){
-    // Tabs
-    document.querySelectorAll('.tab').forEach(t=>{t.addEventListener('click',(e)=>{
-        document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));document.querySelectorAll('.tc').forEach(x=>x.classList.remove('on'));
+    // Bottom Nav Tabs
+    document.querySelectorAll('.bnav-item').forEach(t=>{t.addEventListener('click',(e)=>{
+        document.querySelectorAll('.bnav-item').forEach(x=>x.classList.remove('on'));document.querySelectorAll('.tc').forEach(x=>x.classList.remove('on'));
         t.classList.add('on');$(t.dataset.t).classList.add('on');
         
         // Clear edit state if manually navigating away from entries tab
@@ -743,6 +831,9 @@ function listen(){
     $('btn-cancel').addEventListener('click', cancelEdit);
     $('search').addEventListener('input',renderAll);
     $('btn-csv').addEventListener('click',exportCSV);
+
+    // Quick Add Templates
+    if($('btn-save-tpl')) $('btn-save-tpl').addEventListener('click', saveAsTemplate);
 
     // Settings
     $('settings-toggle').addEventListener('click',openSettings);
@@ -880,4 +971,328 @@ function removeBiometrics() {
 }
 
 // ============================================================
+// FEATURE 1: QUICK-ADD TEMPLATES
+// ============================================================
+let templates = [];
+function loadTemplates(){try{const s=localStorage.getItem('rp3_tpl');if(s)templates=JSON.parse(s);}catch(e){}}
+function saveTemplatesStore(){localStorage.setItem('rp3_tpl',JSON.stringify(templates));}
+
+function renderTemplates(){
+    const bar=$('qa-bar');if(!bar)return;
+    loadTemplates();
+    if(!templates.length){
+        bar.innerHTML='<div style="font-size:.75rem;color:var(--muted);padding:4px">No templates yet. Fill the form and tap 💾 to save one.</div>';
+        return;
+    }
+    bar.innerHTML=templates.map((t,i)=>`<div class="qa-chip" onclick="applyTemplate(${i})"><span>${esc(t.category?.split(' ')[0]||'📝')}</span><span class="qa-amt">${t.note||t.category} ₹${t.amount}</span><span class="qa-del" onclick="event.stopPropagation();removeTemplate(${i})">✕</span></div>`).join('');
+}
+
+function saveAsTemplate(){
+    const amt=parseFloat($('tx-amt').value);
+    const cat=$('tx-cat').value;
+    if(!amt||!cat)return alert('Fill amount and category first.');
+    const tpl={
+        type:st.mode, category:cat, mode:$('tx-mode').value,
+        account:$('tx-acct')?.value||'', note:$('tx-note').value,
+        amount:amt, currency:$('tx-cur').value
+    };
+    templates.push(tpl);
+    saveTemplatesStore();
+    renderTemplates();
+}
+
+function applyTemplate(i){
+    const t=templates[i];if(!t)return;
+    st.mode=t.type||'expense';updateModeUI();
+    $('tx-amt').value=t.amount;$('tx-cur').value=t.currency||'INR';
+    $('tx-cat').value=t.category;$('tx-mode').value=t.mode||'';
+    if($('tx-acct')&&t.account)$('tx-acct').value=t.account;
+    $('tx-note').value=t.note||'';
+    $('tx-date').value=dISO(new Date());
+}
+
+function removeTemplate(i){
+    templates.splice(i,1);
+    saveTemplatesStore();
+    renderTemplates();
+}
+
+// ============================================================
+// FEATURE 2: CATEGORY DONUT
+// ============================================================
+const DONUT_COLORS=['#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#6366f1','#14b8a6','#f97316','#a855f7'];
+
+function renderCatDonut(catT, totalSpend){
+    const el=$('cat-donut');if(!el)return;
+    const entries=Object.entries(catT).sort((a,b)=>b[1]-a[1]);
+    if(!entries.length||totalSpend===0){
+        el.innerHTML='<div class="es"><div class="es-i">🍩</div>No expense data to chart.</div>';return;
+    }
+    // Top 8 + Others
+    const top=entries.slice(0,8);
+    const otherSum=entries.slice(8).reduce((s,e)=>s+e[1],0);
+    if(otherSum>0)top.push(['Others',otherSum]);
+
+    let gradParts=[];let deg=0;
+    top.forEach((c,i)=>{
+        const slice=(c[1]/totalSpend)*360;
+        const color=DONUT_COLORS[i%DONUT_COLORS.length];
+        gradParts.push(`${color} ${deg}deg ${deg+slice}deg`);
+        deg+=slice;
+    });
+
+    const legend=top.map((c,i)=>`<div class="cat-legend-item"><div class="cat-legend-dot" style="background:${DONUT_COLORS[i%DONUT_COLORS.length]}"></div><span>${esc(c[0])}</span><span style="color:var(--muted);margin-left:auto">${Math.round((c[1]/totalSpend)*100)}%</span></div>`).join('');
+
+    el.innerHTML=`<div class="cat-donut-wrap"><div class="cat-donut-ring" style="background:conic-gradient(${gradParts.join(',')})"><div class="cat-donut-hole"><span>Total</span><strong>${fShort(totalSpend)}</strong></div></div><div class="cat-legend">${legend}</div></div>`;
+}
+
+// ============================================================
+// FEATURE 2b: SPENDING HEATMAP
+// ============================================================
+function renderHeatmap(){
+    const el=$('heatmap');if(!el)return;
+    const b=getBounds();
+    const days={};
+    // Build daily spend map
+    for(let d=new Date(b.s);d<=b.e;d.setDate(d.getDate()+1)){
+        days[dISO(d)]=0;
+    }
+    filtered.forEach(tx=>{if(txSign(tx)<0)days[tx.date]=(days[tx.date]||0)+toINR(tx);});
+
+    const arr=Object.entries(days).sort((a,b)=>a[0].localeCompare(b[0]));
+    const maxV=Math.max(...arr.map(x=>x[1]))||1;
+
+    // Determine first day of week offset
+    const firstDate=isoD(arr[0]?arr[0][0]:dISO(b.s));
+    const startDay=firstDate.getDay(); // 0=Sun
+
+    const dayLabels=['S','M','T','W','T','F','S'];
+    let cells='';
+    // Empty cells before first day
+    for(let i=0;i<startDay;i++) cells+=`<div class="hm-cell hm-empty"></div>`;
+
+    arr.forEach(([dateStr,val])=>{
+        const day=parseInt(dateStr.split('-')[2]);
+        const intensity=val===0?0:Math.min(4,Math.ceil((val/maxV)*4));
+        cells+=`<div class="hm-cell hm-${intensity}" title="${fDate(dateStr)}: ${fINR(val)}">${day}</div>`;
+    });
+
+    el.innerHTML=`<div class="hm-wrap"><div class="hm-labels">${dayLabels.map(d=>`<span>${d}</span>`).join('')}</div><div class="hm-grid">${cells}</div><div class="hm-scale"><span>Less</span><div class="hm-scale-box hm-0"></div><div class="hm-scale-box hm-1"></div><div class="hm-scale-box hm-2"></div><div class="hm-scale-box hm-3"></div><div class="hm-scale-box hm-4"></div><span>More</span></div></div>`;
+}
+
+// ============================================================
+// FEATURE 3: SMART INSIGHTS
+// ============================================================
+function generateInsights(spend, income, catT){
+    const ins=[];
+    const b=getBounds();
+
+    // 1. Savings rate
+    if(income>0){
+        const rate=Math.round(((income-spend)/income)*100);
+        if(rate>30) ins.push({icon:'🏆',text:`Great savings rate! You're saving ${rate}% of your income this period.`});
+        else if(rate>0) ins.push({icon:'💡',text:`Savings rate: ${rate}%. Aim for 30%+ by cutting discretionary spending.`});
+        else if(rate<=0) ins.push({icon:'⚠️',text:`You're spending more than you earn. Overspend: ${fINR(spend-income)}.`});
+    }
+
+    // 2. Category comparison with last period
+    const d=new Date(st.anchor);
+    let ls,le;
+    if(st.periodType==='month'){ls=dISO(new Date(d.getFullYear(),d.getMonth()-1,1));le=dISO(new Date(d.getFullYear(),d.getMonth(),0));}
+    else if(st.periodType==='week'){const day=d.getDay()||7;const cs=new Date(d);cs.setDate(d.getDate()-day+1);const lstart=new Date(cs);lstart.setDate(cs.getDate()-7);const lend=new Date(lstart);lend.setDate(lstart.getDate()+6);ls=dISO(lstart);le=dISO(lend);}
+    else{ls=dISO(new Date(d.getFullYear()-1,0,1));le=dISO(new Date(d.getFullYear()-1,11,31));}
+
+    const lastCatT={};
+    raw.filter(tx=>tx.date>=ls&&tx.date<=le&&tx.type==='expense').forEach(tx=>{const inr=toINR(tx);lastCatT[tx.category]=(lastCatT[tx.category]||0)+inr;});
+
+    // Find biggest increase
+    let biggestInc=null,biggestPct=0;
+    for(const[cat,amt]of Object.entries(catT)){
+        const prev=lastCatT[cat]||0;
+        if(prev>0){
+            const change=((amt-prev)/prev)*100;
+            if(change>25&&change>biggestPct){biggestPct=change;biggestInc={cat,amt,prev,change};}
+        }
+    }
+    if(biggestInc) ins.push({icon:'📈',text:`${biggestInc.cat} is up ${Math.round(biggestInc.change)}% vs last period (${fINR(biggestInc.prev)} → ${fINR(biggestInc.amt)}).`});
+
+    // 3. Biggest spending day
+    const dayTotals={};
+    filtered.forEach(tx=>{if(txSign(tx)<0)dayTotals[tx.date]=(dayTotals[tx.date]||0)+toINR(tx);});
+    const sortedDays=Object.entries(dayTotals).sort((a,b)=>b[1]-a[1]);
+    if(sortedDays.length>0&&sortedDays[0][1]>0){
+        ins.push({icon:'💸',text:`Biggest spending day: ${fDate(sortedDays[0][0])} with ${fINR(sortedDays[0][1])}.`});
+    }
+
+    // 4. Top category share
+    const topCat=Object.entries(catT).sort((a,b)=>b[1]-a[1])[0];
+    if(topCat&&spend>0){
+        const share=Math.round((topCat[1]/spend)*100);
+        if(share>40) ins.push({icon:'🎯',text:`${topCat[0]} is ${share}% of your spending. Consider setting a category budget.`});
+    }
+
+    // 5. Subscription load
+    const recs=raw.filter(t=>t.recurring);
+    if(recs.length>0){
+        let totalM=0;
+        recs.forEach(tx=>{
+            const inr=toINR(tx);const freq=tx.frequency||'monthly';
+            if(freq==='daily')totalM+=inr*30;else if(freq==='weekly')totalM+=inr*4.33;else if(freq==='yearly')totalM+=inr/12;else totalM+=inr;
+        });
+        const budget=prefs.budget||25000;
+        const recPct=Math.round((totalM/budget)*100);
+        if(recPct>20) ins.push({icon:'🔄',text:`Recurring costs: ${fINR(totalM)}/mo (${recPct}% of budget). ${recs.length} active subscriptions.`});
+    }
+
+    return ins;
+}
+
+function renderInsights(spend, income, catT){
+    const el=$('insights');if(!el)return;
+    const ins=generateInsights(spend, income, catT);
+    if(!ins.length){el.innerHTML='';return;}
+    el.innerHTML=ins.map(i=>`<div class="insight-banner"><span class="ins-icon">${i.icon}</span><span class="ins-text">${i.text}</span></div>`).join('');
+}
+
+// ============================================================
+// FEATURE 4: ACCOUNT BALANCES
+// ============================================================
+const ACCOUNTS=['🏦 Bank Account','💵 Cash','💳 Credit Card','📱 UPI Wallet','💰 Savings'];
+
+function renderAccountBalances(){
+    const el=$('acct-balances');if(!el)return;
+    const balances={};
+    ACCOUNTS.forEach(a=>balances[a]=0);
+
+    // Map old Payment Mode values to Account names
+    const MODE_MAP={
+        '📱 UPI / Bank':'🏦 Bank Account',
+        '🏦 Bank Transfer':'🏦 Bank Account',
+        '💵 Cash':'💵 Cash',
+        '💳 Credit Card':'💳 Credit Card'
+    };
+
+    raw.forEach(tx=>{
+        let acct=tx.account||tx.mode||'🏦 Bank Account';
+        acct=MODE_MAP[acct]||acct; // Normalize old mode names
+        if(!balances[acct])balances[acct]=0;
+        const inr=toINR(tx);
+        const sign=txSign(tx);
+        balances[acct]+=inr*sign;
+    });
+
+    const entries=Object.entries(balances).filter(([_,v])=>v!==0||ACCOUNTS.includes(_));
+    if(!entries.length){el.innerHTML='<div class="es">No account data yet.</div>';return;}
+
+    el.innerHTML=entries.map(([acct,bal])=>{
+        const cls=bal>=0?'positive':'negative';
+        const prefix=bal>=0?'+':'−';
+        return `<div class="acct-row"><span class="acct-name">${esc(acct)}</span><span class="acct-bal ${cls}">${prefix}${fINR(Math.abs(bal))}</span></div>`;
+    }).join('');
+}
+
+// ============================================================
+// FEATURE 5: SAVING STREAKS
+// ============================================================
+function calcStreak(){
+    const now=new Date();
+    const daysInMonth=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+    const dailyBudget=(prefs.budget||25000)/daysInMonth;
+
+    // Build daily spend map for current month
+    const monthStart=dISO(new Date(now.getFullYear(),now.getMonth(),1));
+    const today=dISO(now);
+
+    const daySpend={};
+    raw.forEach(tx=>{
+        if(tx.date>=monthStart&&tx.date<=today&&txSign(tx)<0){
+            daySpend[tx.date]=(daySpend[tx.date]||0)+toINR(tx);
+        }
+    });
+
+    // Walk backwards from yesterday
+    let streak=0;
+    const yesterday=new Date(now);yesterday.setDate(now.getDate()-1);
+
+    for(let d=new Date(yesterday);d>=new Date(now.getFullYear(),now.getMonth(),1);d.setDate(d.getDate()-1)){
+        const ds=dISO(d);
+        const spent=daySpend[ds]||0;
+        if(spent<=dailyBudget) streak++;
+        else break;
+    }
+
+    // Best streak from localStorage
+    let best=parseInt(localStorage.getItem('rp3_best_streak'))||0;
+    if(streak>best){best=streak;localStorage.setItem('rp3_best_streak',String(best));}
+
+    return {current:streak, best, dailyBudget};
+}
+
+function renderStreak(){
+    const el=$('streak-card');if(!el)return;
+    const s=calcStreak();
+    const isActive=s.current>0;
+    const wrap=document.getElementById('card-streak');
+    if(wrap)wrap.className=`cd ${isActive?'streak-active':''}`;
+
+    el.innerHTML=`<div class="streak-wrap"><div class="streak-fire">${isActive?'🔥':'❄️'}</div><div class="streak-info"><div class="streak-num">${s.current}</div><div class="streak-label">${s.current===1?'day':'days'} under daily budget</div><div class="streak-meta">Daily budget: ${fINR(s.dailyBudget)}</div>${s.best>0?`<div class="streak-best">🏆 Best: ${s.best} days</div>`:''}</div></div>`;
+}
+
+// ============================================================
+// COLLAPSIBLE DASHBOARD CARDS
+// ============================================================
+function setupCollapsible(){
+    const collapsed=JSON.parse(localStorage.getItem('rp3_collapsed')||'{}');
+    document.querySelectorAll('#t-dash .cd').forEach((card,i)=>{
+        const title=card.querySelector('.ct');
+        if(!title)return;
+        const key='card_'+i;
+        // Wrap content after title in cd-body if not already
+        if(!card.querySelector('.cd-body')){
+            const body=document.createElement('div');
+            body.className='cd-body';
+            while(title.nextSibling) body.appendChild(title.nextSibling);
+            card.appendChild(body);
+        }
+        if(collapsed[key]) card.classList.add('collapsed');
+        title.addEventListener('click',()=>{
+            card.classList.toggle('collapsed');
+            const state=JSON.parse(localStorage.getItem('rp3_collapsed')||'{}');
+            state[key]=card.classList.contains('collapsed');
+            localStorage.setItem('rp3_collapsed',JSON.stringify(state));
+        });
+    });
+}
+
+// ============================================================
+// CONFETTI CELEBRATION
+// ============================================================
+function fireConfetti(){
+    const container=document.createElement('div');
+    container.className='confetti-container';
+    document.body.appendChild(container);
+    const colors=['#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#6366f1','#f97316'];
+    for(let i=0;i<60;i++){
+        const piece=document.createElement('div');
+        piece.className='confetti-piece';
+        piece.style.left=Math.random()*100+'%';
+        piece.style.background=colors[Math.floor(Math.random()*colors.length)];
+        piece.style.width=(Math.random()*8+5)+'px';
+        piece.style.height=(Math.random()*8+5)+'px';
+        piece.style.borderRadius=Math.random()>0.5?'50%':'0';
+        piece.style.animation=`confetti-fall ${Math.random()*2+1.5}s ease-out ${Math.random()*0.5}s forwards`;
+        container.appendChild(piece);
+    }
+    setTimeout(()=>container.remove(),4000);
+}
+
+// ============================================================
 init();
+// Setup collapsible after DOM is ready
+setTimeout(setupCollapsible, 500);
+
+// ============================================================
+init();
+// Setup collapsible after DOM is ready
+setTimeout(setupCollapsible, 500);
+
