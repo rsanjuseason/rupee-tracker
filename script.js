@@ -65,9 +65,10 @@ function init(){
                     const idBuffer = Uint8Array.from(atob(prefs.biometricId), c => c.charCodeAt(0));
                     const assertion = await navigator.credentials.get({
                         publicKey: {
-                            challenge: new Uint8Array(32), // Reverted to simple array
+                            challenge: crypto.getRandomValues(new Uint8Array(32)),
+                            rpId: window.location.hostname,
                             allowCredentials: [{ id: idBuffer, type: 'public-key' }],
-                            userVerification: 'preferred' // Changed from 'required' to be more lenient
+                            userVerification: 'required'
                         }
                     });
                     if(assertion) {
@@ -948,7 +949,7 @@ async function setupBiometrics() {
         const credential = await navigator.credentials.create({
             publicKey: {
                 challenge: crypto.getRandomValues(new Uint8Array(32)),
-                rp: { name: "Rupee Tracker Pro" },
+                rp: { name: "Rupee Tracker Pro", id: window.location.hostname },
                 user: { id: crypto.getRandomValues(new Uint8Array(16)), name: "user", displayName: "User" },
                 pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
                 authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
