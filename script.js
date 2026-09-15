@@ -65,10 +65,9 @@ function init(){
                     const idBuffer = Uint8Array.from(atob(prefs.biometricId), c => c.charCodeAt(0));
                     const assertion = await navigator.credentials.get({
                         publicKey: {
-                            challenge: crypto.getRandomValues(new Uint8Array(32)),
+                            challenge: new Uint8Array(32), // Reverted to simple array
                             allowCredentials: [{ id: idBuffer, type: 'public-key' }],
-                            userVerification: 'required',
-                            timeout: 60000
+                            userVerification: 'preferred' // Changed from 'required' to be more lenient
                         }
                     });
                     if(assertion) {
@@ -81,13 +80,13 @@ function init(){
                     // Show PIN fallback on failure if available
                     if(pinFallback && prefs.cloudPin) {
                         pinFallback.style.display = 'block';
-                        alert("Biometric unlock failed. You can use your PIN instead.");
+                        alert(`Biometric unlock failed (${e.name}). You can use your PIN instead.`);
                     } else {
-                        alert("Unlock failed. Please try again.");
+                        alert(`Unlock failed (${e.name}). Please try again or re-setup biometrics.`);
                     }
                 }
             };
-            // Attempt auto-trigger biometric prompt
+            // Attempt auto-trigger biometric prompt so user doesn't have to click
             setTimeout(() => btnUnlock.click(), 500);
         }
 
