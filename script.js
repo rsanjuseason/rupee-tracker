@@ -67,7 +67,7 @@ function init(){
                         publicKey: {
                             challenge: crypto.getRandomValues(new Uint8Array(32)),
                             rpId: window.location.hostname,
-                            allowCredentials: [{ id: idBuffer, type: 'public-key' }],
+                            allowCredentials: [{ id: idBuffer, type: 'public-key', transports: ['internal'] }],
                             userVerification: 'required'
                         }
                     });
